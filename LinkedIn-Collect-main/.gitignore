@@ -148,3 +148,6 @@ venv8/
 quickstart.py
 states.json
 logs
+
+# Pipeline generated outputs
+out/

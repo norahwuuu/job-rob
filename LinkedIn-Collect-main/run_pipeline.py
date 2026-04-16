@@ -1090,12 +1090,20 @@ class Pipeline:
         log.info(f"输出目录: {output.get('base_dir')} (by_date={output.get('by_date')})")
         log.info("-" * 60)
 
-    def run_rescore_llm(self, limit: Optional[int] = None) -> int:
+    def run_rescore_llm(
+        self,
+        limit: Optional[int] = None,
+        quota_skipped: bool = False,
+        quota_skipped_file: Optional[str] = None,
+    ) -> int:
         """
         对 jobs_progress.json 中「LLM 批量评分失败」的岗位重新调用 AIScorer.score_jobs，并写回文件。
 
         匹配条件：ai_reason 包含「LLM评分失败」或「未获取到评分」（与 linkedin_scraper.AIScorer.score_jobs_batch 一致）。
         适用于 429、网络超时等导致整批落入默认分的情况。配额恢复后可将 llm_delay 调大再执行。
+
+        如果 quota_skipped=True：会额外限制 job_id 必须出现在 quota_skipped_jobs.json（或 quota_skipped_file 指定文件）中，
+        用于只重跑你关心的“失败列表”而非全量重刷。
         """
         import linkedin_scraper
 
@@ -1118,6 +1126,28 @@ class Pipeline:
             return any(m in r for m in markers)
 
         indices = [i for i, j in enumerate(all_jobs) if needs_rescore(j)]
+        if quota_skipped:
+            quota_file = (
+                Path(quota_skipped_file)
+                if quota_skipped_file
+                else self._artifact_path("quota_skipped_jobs.json")
+            )
+            if not quota_file.exists():
+                log.error(f"未找到 quota_skipped_jobs.json: {quota_file}")
+                return 0
+            with open(quota_file, "r", encoding="utf-8") as f:
+                quota_list = json.load(f)
+            if not isinstance(quota_list, list):
+                log.error("quota_skipped_jobs.json 应为岗位数组")
+                return 0
+            quota_job_ids = {
+                str(item.get("job_id"))
+                for item in quota_list
+                if item.get("job_id") is not None
+            }
+            indices = [
+                i for i in indices if str(all_jobs[i].get("job_id")) in quota_job_ids
+            ]
         if limit is not None:
             if limit <= 0:
                 log.warning("rescore-llm：--limit 须为正整数；传 0 或负数将不处理任何记录")
@@ -2093,6 +2123,7 @@ def main():
   python run_pipeline.py generate --min-score 50   # 覆盖配置的最低分（如评分均为占位值时）
   python run_pipeline.py rescore-llm              # 重新评分：ai_reason 为 LLM评分失败 / 未获取到评分
   python run_pipeline.py rescore-llm --limit 30    # 只重评前 30 条失败记录（防 429）
+  python run_pipeline.py rescore-llm --quota-skipped # 只重评 quota_skipped_jobs.json 里的失败岗位（更快）
   python run_pipeline.py apply        # 只自动申请 Easy Apply
   python run_pipeline.py apply --max 10  # 最多申请10个岗位
   python run_pipeline.py status       # 查看进度
@@ -2108,6 +2139,8 @@ def main():
     parser.add_argument('arg', nargs='?', help='命令参数')
     parser.add_argument('--config', default='pipeline_config.yaml', help='配置文件路径')
     parser.add_argument('--limit', type=int, default=None, help='限制数量 (generate / crawl-detail / rescore-llm)')
+    parser.add_argument('--quota-skipped', action='store_true', help='仅重评 quota_skipped_jobs.json 中的岗位（并结合 ai_reason 失败标记）')
+    parser.add_argument('--quota-skipped-file', default=None, help='quota_skipped_jobs.json 路径（仅用于 --quota-skipped）')
     parser.add_argument('--max', type=int, default=None, help='最多申请的岗位数量 (用于 apply 命令)')
     parser.add_argument('--force', action='store_true', help='强制重新处理已处理过的岗位')
     parser.add_argument('--min-score', type=int, default=None, dest='min_score', help='最低 AI 分，覆盖 pipeline_config 中 filter.min_ai_score（仅 generate）')
@@ -2127,7 +2160,11 @@ def main():
         elif args.command == 'generate':
             pipeline.run_generate(limit=args.limit, force=args.force, min_ai_score=args.min_score)
         elif args.command == 'rescore-llm':
-            pipeline.run_rescore_llm(limit=args.limit)
+            pipeline.run_rescore_llm(
+                limit=args.limit,
+                quota_skipped=bool(args.quota_skipped),
+                quota_skipped_file=args.quota_skipped_file,
+            )
         elif args.command == 'apply':
             pipeline.run_apply(max_jobs=args.max)
         elif args.command == 'status':
