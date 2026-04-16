@@ -1,0 +1,30 @@
+username: ''
+password: ''
+phone_number: ''
+profile_path: ''
+positions:
+- Frontend Engineer
+locations:
+- Germany
+salary: 60,000
+rate: 25
+uploads:
+  Resume: ./cv.pdf
+  Cover Letter: ./cl.pdf
+output_filename:
+- ./out.csv
+experience_level:
+- 1
+- 2
+- 3
+- 4
+geo_id: null
+time_filter: r86400
+sort_by: R
+max_pages: 1
+headless: false
+batch_size: 1
+llm_delay: 0.2
+gemini_api_key: ''
+gemini_model: gemini-2.5-flash
+use_llm_scoring: true

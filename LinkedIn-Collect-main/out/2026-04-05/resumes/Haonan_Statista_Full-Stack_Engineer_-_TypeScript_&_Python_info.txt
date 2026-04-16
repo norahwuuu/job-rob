@@ -1,0 +1,48 @@
+Job Title: Full-Stack Engineer - TypeScript & Python (m/f/d)
+Company: Statista
+Location: 
+URL: https://www.linkedin.com/jobs/view/4387935138
+AI Score: 88
+AI Reason: 候选人职位（全栈工程师）与岗位高度匹配，英语流利符合工作语言要求。岗位提及TypeScript和Python，假设候选人作为全栈工程师具备相关技能。JD未明确提及签证/搬迁支持。 | ✓Full-Stack Engineering,English (Fluent),TypeScript
+
+===== Job Description =====
+At Statista, we’re all about facts and data, for we are the world's leading business data platform. By providing reliable and easy-to-use data as well as various data analytics products and services, we empower people worldwide to make fact-based decisions.
+
+Founded in Hamburg in 2007, we have quickly grown into a global company with offices in major cities such as London, New York, Berlin and Tokyo. And we still have a lot of plans. Our constant growth does not only prove our success, but also keeps creating new development and career opportunities for our employees.
+
+We value and celebrate our diverse culture. You are welcome here for who you are, no matter where you come from, what you look like, or whether you prefer bar graphs to pie charts. Your story matters – keep writing it as part of our team.
+
+Are you ready to join us?
+
+We are a fast-growing data-as-a-service company turning complex data into meaningful products that help businesses make smarter decisions. Our platform powers real-world applications across customer-facing interfaces and internal tools — and we're building the future of intelligent, data-driven software. We are now looking for a passionate Full-Stack Engineer to join us and help shape what comes next.
+
+Your Role
+
+As a Full-Stack Engineer, you will be at the heart of turning raw data into elegant, reliable products. You'll work across the entire stack — from crafting intuitive UIs to building robust backend services — and you'll own your work end to end. This is a role for someone who thinks beyond tickets, cares deeply about quality, and gets excited about the intersection of data and product.
+
+Write well-structured, maintainable code in TypeScript and Python that your teammates will actually enjoy working with
+Transform data into meaningful, impactful products our customers rely on every day
+Build and evolve both customer-facing and internal UIs and services
+Own the full software lifecycle: from design and development through code reviews, deployment, and long-term maintainability
+Communicate fluently in English (written and spoken) — German is a welcome bonus
+Your profile
+5+ years of professional experience building front- and back-end services with a focus on seamless user experience
+Strong proficiency in HTML5, CSS/SCSS, JavaScript/TypeScript, and modern frontend frameworks — especially React
+Solid understanding of responsive web design and cross-browser compatibility
+Proven ability to ship production-ready Python backends
+A creative problem-solving mindset — you don't just fix bugs, you ask why they exist and you fix them
+Genuine curiosity and openness to learning new technologies
+A true team player with a strong sense of personal ownership
+What We Offer
+
+In addition to our great team, culture, and our shared goal of empowering people with data, there are many other things that make Statista a great place to work! Join us and benefit from:
+
+Work from abroad up to 30 calendar days a year
+Hybrid work and flex-time
+International team and social events
+Subsidized urban mobility and access to fitness and wellness options
+Free access to Langdock and all its amazing functionalities
+Career & training opportunities
+Attractive locations and modern offices
+Mental health support with OpenUp
+Some of the benefits listed here apply only to the German entity and to Junior-level roles or above.

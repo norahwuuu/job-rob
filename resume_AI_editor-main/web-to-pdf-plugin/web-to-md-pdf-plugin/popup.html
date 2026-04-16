@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+      margin: 0;
+      background: #f8f9fa;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header h2 {
+      margin: 0 0 4px 0;
+      color: #1a73e8;
+      font-size: 18px;
+    }
+    .header p {
+      margin: 0;
+      color: #5f6368;
+      font-size: 12px;
+    }
+    .main-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .main-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+    }
+    .main-btn:disabled {
+      background: #9aa0a6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .status {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+    .status.loading {
+      display: block;
+      background: #e8f0fe;
+      color: #1967d2;
+    }
+    .status.success {
+      display: block;
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .status.error {
+      display: block;
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .result-panel {
+      display: none;
+      margin-top: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .result-header {
+      padding: 12px;
+      background: #f1f3f4;
+      border-bottom: 1px solid #e8eaed;
+    }
+    .result-header h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      color: #202124;
+    }
+    .result-meta {
+      font-size: 12px;
+      color: #5f6368;
+    }
+    .result-meta span {
+      margin-right: 12px;
+    }
+    .modifications {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .mod-item {
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      background: #f8f9fa;
+    }
+    .mod-item.success {
+      border-left: 3px solid #34a853;
+    }
+    .mod-item.failed {
+      border-left: 3px solid #ea4335;
+    }
+    .mod-icon {
+      margin-right: 6px;
+    }
+    .mod-target {
+      color: #5f6368;
+      text-decoration: line-through;
+    }
+    .mod-arrow {
+      margin: 0 6px;
+      color: #9aa0a6;
+    }
+    .mod-replacement {
+      color: #1a73e8;
+      font-weight: 500;
+    }
+    .mod-reason {
+      margin-top: 4px;
+      color: #80868b;
+      font-size: 11px;
+    }
+    .mod-error {
+      color: #ea4335;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .download-btns {
+      display: none;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .download-btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .download-btn.pdf {
+      background: #34a853;
+      color: white;
+    }
+    .download-btn.pdf:hover {
+      background: #2d9249;
+    }
+    .download-btn.word {
+      background: #4285f4;
+      color: white;
+    }
+    .download-btn.word:hover {
+      background: #3b78e7;
+    }
+    .suggestions {
+      margin-top: 12px;
+      padding: 10px;
+      background: #fff8e1;
+      border-radius: 6px;
+      display: none;
+    }
+    .suggestions h4 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      color: #f57c00;
+    }
+    .suggestions ul {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 11px;
+      color: #5f6368;
+    }
+    .suggestions li {
+      margin-bottom: 4px;
+    }
+    .history-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      background: transparent;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .history-btn:hover {
+      background: #f1f3f4;
+      color: #202124;
+    }
+    /* 历史记录面板 */
+    .history-panel {
+      display: none;
+      margin-top: 12px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .history-panel.show {
+      display: block;
+    }
+    .history-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e8eaed;
+      font-size: 12px;
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .history-item-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .history-item-title {
+      font-weight: 500;
+      color: #202124;
+    }
+    .history-item-date {
+      color: #9aa0a6;
+      font-size: 11px;
+    }
+    .history-item-meta {
+      color: #5f6368;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+    .history-item-btns {
+      display: flex;
+      gap: 6px;
+    }
+    .history-download-btn {
+      padding: 4px 8px;
+      font-size: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .history-download-btn.pdf {
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .history-download-btn.pdf:hover {
+      background: #34a853;
+      color: white;
+    }
+    .history-download-btn.word {
+      background: #e8f0fe;
+      color: #1967d2;
+    }
+    .history-download-btn.word:hover {
+      background: #4285f4;
+      color: white;
+    }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* AI 问答助手区块 */
+    .qa-divider {
+      margin: 16px 0;
+      border: none;
+      border-top: 1px dashed #dadce0;
+    }
+    .qa-header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .qa-header h3 {
+      margin: 0 0 4px 0;
+      color: #7c3aed;
+      font-size: 16px;
+    }
+    .qa-header p {
+      margin: 0;
+      color: #5f6368;
+      font-size: 11px;
+    }
+    .qa-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .qa-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+    .qa-btn:disabled {
+      background: #9aa0a6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .qa-status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+    .qa-status.loading {
+      display: block;
+      background: #f3e8ff;
+      color: #7c3aed;
+    }
+    .qa-status.success {
+      display: block;
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .qa-status.error {
+      display: block;
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .qa-results {
+      display: none;
+      margin-top: 12px;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+    .qa-results.show {
+      display: block;
+    }
+    .qa-item {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .qa-question {
+      padding: 10px 12px;
+      background: #f3e8ff;
+      font-size: 13px;
+      font-weight: 500;
+      color: #5b21b6;
+      border-bottom: 1px solid #e9d5ff;
+    }
+    .qa-answer {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .qa-copy-row {
+      padding: 6px 12px 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .copy-btn {
+      padding: 5px 10px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #e8f0fe;
+      color: #1967d2;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: #1a73e8;
+      color: white;
+    }
+    .copy-btn.copied {
+      background: #e6f4ea;
+      color: #137333;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>🚀 简历优化助手</h2>
+    <p>从当前网页提取职位描述，一键优化简历</p>
+  </div>
+  
+  <button id="optimizeBtn" class="main-btn">
+    ✨ 提取职位描述并优化简历
+  </button>
+  
+  <div id="status" class="status"></div>
+  
+  <div id="resultPanel" class="result-panel">
+    <div class="result-header">
+      <h3 id="resultTitle">优化结果</h3>
+      <div class="result-meta">
+        <span id="matchScore">匹配度: --</span>
+        <span id="modCount">修改: --</span>
+      </div>
+    </div>
+    <div id="modifications" class="modifications"></div>
+  </div>
+  
+  <div id="suggestions" class="suggestions">
+    <h4>💡 AI 建议</h4>
+    <ul id="suggestionList"></ul>
+  </div>
+  
+  <div id="downloadBtns" class="download-btns">
+    <button id="downloadPdf" class="download-btn pdf">📄 下载 PDF</button>
+    <button id="downloadWord" class="download-btn word">📝 下载 Word</button>
+  </div>
+  
+  <button id="historyBtn" class="history-btn">📋 查看申请历史</button>
+  
+  <div id="historyPanel" class="history-panel"></div>
+
+  <!-- AI 问答助手区块 -->
+  <hr class="qa-divider">
+  
+  <div class="qa-header">
+    <h3>💬 AI 问答助手</h3>
+    <p>自动提取页面申请问题，AI 结合简历生成答案</p>
+  </div>
+  
+  <button id="qaBtn" class="qa-btn">
+    🔍 提取问题并生成答案
+  </button>
+  
+  <div id="qaStatus" class="qa-status"></div>
+  
+  <div id="qaResults" class="qa-results"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

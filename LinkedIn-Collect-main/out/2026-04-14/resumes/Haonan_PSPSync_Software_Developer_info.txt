@@ -1,0 +1,31 @@
+Job Title: Software Developer
+Company: PSPSync Limited
+Location: 
+URL: https://www.linkedin.com/jobs/view/4394256260
+AI Score: 90
+AI Reason: 候选人作为全栈工程师，与远程软件开发岗位的基本要求高度契合，语言无障碍，且岗位为全职。 | ✓Software Development Experience,Programming Language Proficiency,Frameworks
+
+===== Job Description =====
+📌 Software Developer (Remote / Full-Time)
+Overview:
+ We are looking for a skilled Software Developer to design, develop, and maintain high-quality applications in a fully remote environment.
+Key Responsibilities:
+Develop, test, and maintain applications
+Write clean, efficient, and maintainable code
+Collaborate with cross-functional teams
+Troubleshoot and debug issues
+Optimize performance and scalability
+Requirements:
+Experience in software development
+Proficiency in at least one programming language
+Familiarity with frameworks, databases, and Git
+Strong problem-solving skills
+Ability to work independently
+Nice to Have:
+Experience with cloud platforms or APIs
+Knowledge of Agile or DevOps practices
+What We Offer:
+Fully remote work arrangement
+Collaborative and supportive team
+Opportunity to work on impactful projects
+Competitive compensation

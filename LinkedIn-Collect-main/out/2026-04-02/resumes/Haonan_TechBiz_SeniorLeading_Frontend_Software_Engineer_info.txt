@@ -1,0 +1,39 @@
+Job Title: Senior/Leading Frontend Software Engineer
+Company: TechBiz Global
+Location: 
+URL: https://www.linkedin.com/jobs/view/4395259232
+AI Score: 90
+AI Reason: 岗位职责与候选人的前端/全栈经验高度契合，特别是复杂UI设计、前端架构演进和与后端协作。语言能力完全符合，无德语要求。 | ✓Frontend Architecture,Complex UI Design,Interactive UI Development
+
+===== Job Description =====
+At TechBiz Global, we are providing recruitment service to our TOP clients from our portfolio. We are currently seeking a Senior/Leading Frontend Software Engineer to join one of our clients' team. If you're looking for an exciting opportunity to grow in a innovative environment, this could be the perfect fit for you.
+WHAT YOU WILL BE CHALLENGED WITH:
+Design and implement complex administrative interfaces for configuring and operating insurance products.
+Build schema-driven and highly interactive UIs that allow experts to define product structures, pricing rules, and workflows.
+Own and evolve our frontend architecture, ensuring scalability, maintainability, and performance across a growing platform.
+Collaborate closely with backend teams building microservice-based APIs (gRPC / REST) powering product configuration and policy operations.
+Contribute to the design of AI-assisted workflows, where domain experts interact with AI tools to configure and operate insurance products faster.
+Establish and maintain frontend engineering standards, including performance optimization, accessibility (A11y), and robust state management.
+Work with Product and UX to transform complex insurance concepts into clear, efficient user experiences.
+WHAT WE ARE LOOKING FOR:
+We are looking for a Senior or Lead Frontend Engineer who enjoys building complex software systems and translating difficult domain problems into intuitive user interfaces. Beside this you bring:
+Extensive experience building large-scale production frontend applications.
+Deep expertise with React and modern TypeScript-based frontend development.
+Strong experience designing maintainable frontend architectures, including state management, modular component design, and scalable codebases.
+Experience integrating with API-driven microservice architectures.
+Experience building highly interactive UIs, such as complex forms, configuration systems, or data-heavy applications.
+A strong systems-thinking mindset, with the ability to reason about long-term technical and UX trade-offs.
+The ability to take ownership of significant parts of the frontend platform and drive improvements across the codebase.
+Strong knowledge of JavaScript/TypeScript, HTML, and CSS, with attention to performance, accessibility, and cross-browser compatibility.
+Clear English communication skills and an interest in mentoring other engineers.
+Benefits:
+An attractive salary package based on your experience, qualifications and responsibilities
+A remote-friendly working model with occasional trips to Berlin office
+30 days of holiday leave, plus extra half-days off on 24 and 31 December
+A personal training budget of at least €500, or more if necessary
+Exciting opportunities for internal development through a fixed role development model, fixed feedback cycles and performance reviews.
+A company subsidy for Urban Sports Club membership to support your well-being outside of work
+A generously subsidised company pension scheme
+A VSOP programme that lets you benefit from the company's success additionally
+The client provide you with modern hardware; you decide whether you want Windows or iOS
+With weekly company lunches and a well-stocked snack bar, everything you need for a quick bite to eat is right there

@@ -1,0 +1,43 @@
+============================================================
+岗位信息
+============================================================
+
+📌 职位: Full Stack Software Developer
+🏢 公司: FE fundinfo
+📍 地点: 
+🎯 AI评分: 90分
+💼 类型: Easy Apply
+
+🔗 LinkedIn 页面:
+https://www.linkedin.com/jobs/view/4395348266
+
+============================================================
+岗位描述 (JD)
+============================================================
+
+Join us as a Full Stack Software Developer and play a key role in shaping the systems that power the distribution and insights analytics of financial data across global markets.
+
+In this role, you will have the opportunity to work with modern cloud-native technologies, contribute to complex and high‑impact software products, and collaborate closely with talented experts across development, UX, QA, and product. You will take ownership of meaningful technical challenges, influence architectural decisions, and grow your expertise through hands‑on exposure to Azure, DevOps pipelines, modern front‑end frameworks, and full lifecycle development within a supportive and forward‑thinking team.
+
+Your key responsibilities as a Full Stack Software Developer will include:
+Designing, developing, testing, and maintaining full‑stack software applications that support the dissemination and analysis of financial data.
+Optimizing application performance and identifying opportunities to simplify, automate, or improve existing technical solutions.
+Collaborating closely with cross‑functional teams including designers, testers, product managers, and other developers to deliver high‑quality features.
+Conducting unit, integration, and performance testing to ensure the reliability and quality of the software.
+Contributing to technical documentation and staying up to date with emerging technologies and best practices.
+Supporting deployment processes and ensuring smooth integration of new features within cloud‑based environments.
+You will need the following experience and skills to join us as a Full Stack Software Developer:
+You must have strong programming skills and a proven track record of delivering full‑stack software solutions.
+You will have at least 3 years of experience working with server‑side technologies such as .NET/C#/Azure, relational databases, and modern front‑end frameworks.
+You should have experience working in Agile teams and understand how Agile brings value to collaboration and delivery
+You must have experience developing commercial software solutions for end users.
+You will have strong proficiency in English and French (French is essential for this role as the tool, code, comments etc are all in French)
+FE fundinfo is a leading investment management technology and data company connecting asset managers to distributors in the UK, Europe and Asia Pacific. We are proud of our vast, diverse, and highly skilled team, who help to make our industry Better Connected and Better Informed.
+
+At FE fundinfo, you'll join a collaborative, inclusive, and innovative environment where continuous learning is encouraged and every voice is valued. Our teams embrace hybrid working, flexible hours, and regular opportunities to connect across locations. You will be part of a culture that values creativity, teamwork, and the freedom to explore new approaches, supported by ongoing development and knowledge‑sharing
+
+============================================================
+AI 分析
+============================================================
+
+候选人作为全栈工程师与岗位职责高度契合，英语流利符合工作语言要求，岗位描述的技术栈与全栈工程师背景匹配度高。 | ✓Full-Stack Development,Frontend Development,Cloud-Native Technologies | ✗Azure (specific platform经验),Financial Domain Knowledge

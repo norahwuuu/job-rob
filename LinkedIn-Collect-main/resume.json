@@ -1,0 +1,108 @@
+{
+  "basics": {
+    "name": "Haonan Wu",
+    "headline": "Frontend / Full-Stack Engineer",
+    "email": "haonan.wuuu@gmail.com",
+    "phone": "+41799067274",
+    "location": "Olten, Switzerland",
+    "visa": "search job visa holder of Germany"
+  },
+  "skills": [
+    {
+      "name": "Frontend",
+      "keywords": [
+        "React",
+        "React Native",
+        "Redux",
+        "Redux Toolkit",
+        "TypeScript",
+        "JavaScript",
+        "Vue.js",
+        "AngularJS",
+        "Material UI",
+        "HTML5",
+        "CSS3"
+      ]
+    },
+    {
+      "name": "Backend",
+      "keywords": [
+        "Java",
+        "Python"
+      ]
+    },
+    {
+      "name": "Architecture & Practices",
+      "keywords": [
+        "Component-driven architecture",
+        "SPA development",
+        "RESTful APIs",
+        "Microservices",
+        "Performance optimisation",
+        "Accessibility (WCAG)"
+      ]
+    },
+    {
+      "name": "Testing",
+      "keywords": [
+        "JUnit",
+        "Jest",
+        "React Testing Library",
+        "Cypress",
+        "Karma",
+        "Jasmine"
+      ]
+    },
+    {
+      "name": "DevOps",
+      "keywords": [
+        "GitHub Actions",
+        "GitLab CI",
+        "Vite",
+        "Git",
+        "GitHub",
+        "Jira",
+        "Bash"
+      ]
+    },
+    {
+      "name": "Databases",
+      "keywords": [
+        "MySQL",
+        "MongoDB"
+      ]
+    }
+  ],
+  "experiences": [
+    {
+      "company": "Ulab",
+      "position": "Frontend Team Leader",
+      "location": "ChengDu, China",
+      "date": "Jan 2021 - Dec 2024",
+      "summary": "Led the front-end team for a medical/orthodontic platform built with React, Redux Toolkit, Material UI, and Vite, owning planning, estimation, and on-time delivery of releases.\n\n• Designed and implemented a component-driven architecture, improving code reuse and scalability by 40%.\n\n• Integrated WebAssembly for 3D mesh computation, reducing rendering time from 1.2s to 700ms and significantly improving user experience.\n\n• Established CI/CD pipelines using GitHub Actions, increasing release frequency from bi-weekly to daily and improving deployment reliability.\n\n• Defined and enforced coding standards, code review processes, and best practices; mentored junior developers and improved delivery efficiency by 25%.\n\n• Collaborated with product management and UI/UX to translate requirements into technical solutions focused on usability and clinical workflows.\n\n• Optimized core flows and initial load through code-splitting and asset optimization, achieving around 2% first-load improvement on critical paths.\n\n• Managed post-launch maintenance, addressed user feedback, and iteratively improved performance, stability, and product experience."
+    },
+    {
+      "company": "Key Studio",
+      "position": "Front-end Developer",
+      "location": "Kuala Lumpur, Malaysia",
+      "date": "Nov 2017 - May 2020",
+      "summary": "Designed and developed scalable web and mobile applications using React, React Native, Redux, Redux Toolkit, and TypeScript.\n\n• Built reusable UI components, custom hooks, and shared libraries to improve maintainability and shorten development timelines.\n\n• Implemented predictable state management with Redux / Redux Toolkit, improving data flow clarity, performance, and consistency.\n\n• Collaborated with backend engineers to integrate RESTful APIs and GraphQL, ensuring robust error handling and smooth user interactions.\n\n• Optimized application performance through code splitting, lazy loading, memoization (React.memo, useCallback, useMemo), and bundle optimization.\n\n• Split rendering, data, and UI control into independent modules to achieve high cohesion and low coupling, improving collaboration and testability.\n\n• Participated in the full SDLC: requirements refinement, technical design, implementation, testing, and deployment.\n\n• Conducted code reviews and mentored junior developers, promoting clean code and modern React patterns.\n\n• Wrote unit and integration tests using Jest, React Testing Library, and Cypress to reduce regression risk and maintain release quality.\n\n• Implemented FastAPI POST APIs with OAuth2 (Authorization Code), applied business logic processing, and forwarded requests to Java backend services via synchronous REST APIs."
+    },
+    {
+      "company": "RoseFinsh",
+      "position": "Web Developer",
+      "location": "Beijing, China",
+      "date": "Jan 2014 - Nov 2017",
+      "summary": "Developed and maintained full-stack web applications using Java (Spring / Spring Boot) and AngularJS / ECharts, later introducing Vue.js for modern interfaces.\n\n• Built RESTful APIs, optimized database queries, and ensured reliable data flow between front-end and backend services handling high-volume financial data.\n\n• Implemented responsive UI components, state management, and reusable modules to improve maintainability and user experience.\n\n• Participated in the complete SDLC: requirements analysis, solution design, implementation, testing, deployment, and maintenance.\n\n• Wrote unit tests (JUnit / Karma / Jasmine) to ensure stability and reduce regressions; supported CI/CD and version control with Git.\n\n• Delivered real-time trading visualization and analytics dashboards using Vue.js and Java (Spring Boot)."
+    }
+  ],
+  "educations": [
+    {
+      "institution": "Jilin Normal University",
+      "area": "Communications Engineering",
+      "studyType": "Bachelor",
+      "date": "Sep 2010 - Jun 2014",
+      "location": "China"
+    }
+  ]
+}

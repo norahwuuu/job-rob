@@ -1,0 +1,44 @@
+Job Title: Frontend Developer
+Company: Nicoll Curtin
+Location: 
+URL: https://www.linkedin.com/jobs/view/4396946455
+AI Score: 88
+AI Reason: 候选人作为前端/全栈工程师，与岗位所需的React、JavaScript、TypeScript、Node.js等核心技术栈高度匹配，具备构建高性能UI和参与架构的能力。岗位地点在苏黎世，但JD未要求德语，候选人英语流利，符合工作语言要求。 | ✓ReactJS,JavaScript,TypeScript | ✗Trading Platform Experience,Unix / Bash scripting
+
+===== Job Description =====
+Are you a hands-on React Frontend Developer with strong JavaScript expertise and a passion for building high-performance trading applications?
+We are currently supporting a leading private banking client in Zurich that is looking for a React Frontend Developer to join a strategic trading platform team.
+This is an exciting opportunity to help maintain and evolve a mission-critical front-office trading platform, while also contributing to the design and development of new frontend libraries and frameworks that will shape future platform capabilities.
+You will work directly with traders, business stakeholders, and agile engineering teams, translating requirements into innovative and scalable frontend solutions.
+Your responsibilities will include
+Frontend Development
+Maintain and enhance the existing trading platform frontend
+Develop new reusable frontend libraries, components, and frameworks
+Build modern, scalable, and high-performance UI solutions using React
+Contribute to architecture and frontend best practices
+Business Interaction & Agile Delivery
+Work closely with traders and business owners to gather new requirements
+Translate business needs into technical frontend solutions
+Participate in agile ceremonies and collaborate with cross-functional teams
+Support continuous improvement of development processes and frameworks
+Technical Environment
+ReactJS
+TypeScript
+JavaScript
+Node.js
+Unix / Bash scripting
+Agile delivery environment
+Required experience and skills
+Strong hands-on JavaScript development experience
+Deep expertise in ReactJS
+Excellent knowledge of TypeScript and Node.js
+Understanding of Unix operating systems and Bash scripting
+Strong problem-solving and decision-making skills
+Experience building reusable frontend libraries and frameworks
+Previous experience in the financial services industry is highly preferred
+📍 Location: Zurich Altstetten
+💼 Workload: 100%
+⏳ Duration: 12 months
+For more information:
+📩 Sava.Ocokoljic@nicollcurtin.com
+📞+41 43 508 95 78

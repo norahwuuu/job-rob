@@ -1,0 +1,85 @@
+你是一个求职顾问。请根据候选人简历，判断以下岗位是否值得进一步了解。
+
+## 候选人简历
+**姓名**: Haonan Wu
+**职位**: Frontend / Full-Stack Engineer
+
+## 候选人核心诉求
+1. **主要目标**: 前端开发或全栈开发（优先 React / TypeScript / Vue / React Native）。
+2. **次要目标**: AI 应用工程相关岗位（LLM/RAG/Agent）且技术栈与前端/全栈有交集。
+3. **首选（偏好，非硬性过滤）**: **全职**（Full-time / Permanent，或等同的长期雇佣）且 JD 或标题能看出 **明确签证/工签赞助/relocation support** 的岗位，在方向匹配时视为**最优先**；在 `reason` 中可写「首选：全职+签证」。
+4. **亦接受**: Freelancer、Contractor、零工、短期合同、项目制、兼职等与工程开发相关的形式；**不因**无签证说明或灵活用工而直接过滤，但优先级低于「首选」。
+5. **签证信息**: 不因「未写签证」或「写明不提供签证」而机械过滤（由候选人自行判断）；若同时满足首选条件，务必在 `reason` 里突出。
+
+## 系统细评排序优先级（列表页仅有标题时可忽略；有JD后由程序自动分档）
+岗位经技能/关键词评分后，最终展示顺序为：**先按下面档位 1→5 分桶，同一档位内再按匹配分从高到低**：
+1. 有签证支持的瑞士软件行业岗位
+2. 有签证支持的德国 Remote 岗位
+3. 有签证支持的德国 Hybrid 岗位
+4. 远程岗位（全球，含未写签证者）
+5. 兼职岗位（含 Part-time / Teilzeit / 零工类）
+
+### 黑名单公司（直接过滤）
+- Jobs via eFinancialCareers
+- Instaffo
+
+## 待筛选岗位列表（只有标题和公司）
+- Job ID: 4402629247 | 标题: Mobile UI/Design Engineer | 公司: Kraken
+- Job ID: 4402609337 | 标题: (Senior) Full-Stack Engineer in a fast-growing AI Startup | 公司: Lightly
+- Job ID: 4400787458 | 标题: Software Engineer III, YouTube Trust and Safety | 公司: Google
+- Job ID: 4399771423 | 标题: Software Engineering Transformation Lead | 公司: SwissPeak Partners
+- Job ID: 4401783291 | 标题: Software Engineer | 公司: Chipmind
+- Job ID: 4400718576 | 标题: Software Engineer (Code Review & Quality) | $80/hr Remote | 公司: Crossing Hurdles
+- Job ID: 4401706775 | 标题: Full-Stack Engineer | 公司: LatticeFlow AI
+- Job ID: 4381714432 | 标题: Ingénieur DevOps | 公司: Qim info
+- Job ID: 4281724253 | 标题: C++ Software Engineer | 公司: Citadel Securities
+- Job ID: 4360140295 | 标题: Quantitative Developer | 公司: Millennium
+- Job ID: 4400715654 | 标题: Software Engineer - Python & Go | $80/hr Remote | 公司: Crossing Hurdles
+- Job ID: 4400966281 | 标题: TypeScript + Rust Developer | 公司: micro1
+- Job ID: 4286640981 | 标题: Software Engineer - App Stores | 公司: Canonical
+- Job ID: 4387716171 | 标题: Software Entwickler - Visualisierung / HMI (m/w/d) | 公司: Syntegon
+- Job ID: 4400904852 | 标题: Senior Software Engineer | 公司: Digis, a Fiverr company (NYSE: FVRR)
+
+## 筛选与过滤规则
+请严格按照以下逻辑判断：
+
+### 必须过滤（keep: false）
+1. **[F1] 方向不匹配**: 纯销售(Sales)、纯运营(Ops)、纯项目管理/产品管理（无工程开发要求）。
+2. **[F2] 纯后端且技术栈偏离**: 仅 .NET/Go/PHP 维护型 CRUD，且无前端职责、无工程落地职责时过滤。对 Java/Spring/Python/FastAPI 后端工程岗位可保留（尤其有 API 设计、性能优化、分布式、工程化实践）。
+3. **[F3] 级别过高**: Director, VP, Chief, Head of, Principal（明显管理层或超资深策略岗）。
+4. **[F4] 强德语门槛**: 标题/JD 明确 "German speaking required", "Fluent German", "C1/C2 German required"。
+5. **[F5] 低匹配站点类岗位**: 以 WordPress/Shopify 页面搭建为主、工程复杂度低且与候选人核心能力不匹配。
+6. **[F6] 不确定岗位**: 标题信息模糊，无法判断与前端/全栈目标匹配时，默认过滤。
+
+### 必须保留（keep: true）
+1. **[K1] 前端核心岗位**: Frontend Engineer/Developer, React Engineer, Vue Engineer, Angular Engineer, Web Frontend Engineer。
+2. **[K2] 全栈偏前端岗位**: Full-Stack Engineer/Developer，且包含 React/Vue/TypeScript/Node/Python/Java 等工程开发职责。
+3. **[K3] 移动端相关岗位**: React Native Engineer/Developer，或明确要求 React Native。
+4. **[K4] AI 应用工程岗位**: LLM/RAG/Agent/GenAI 方向，且岗位强调工程落地（application/engineering/deployment）。
+5. **[K5] 技术栈强匹配岗位**: 标题或职责出现 React, React Native, TypeScript, JavaScript, Redux, Vue, Angular, HTML, CSS, REST/GraphQL, FastAPI, Spring Boot 中多个关键项。
+6. **[K6] 首选命中（保留时强调）**: 全职 + 明确 visa / work permit / relocation / sponsorship 之一，且与前端/全栈/后端工程方向一致 -> **keep: true**，`reason` 优先写清「首选：全职+签证」。
+7. **[K7] Freelance/Contract/零工**: 标题或职责相关且与工程方向一致 -> **keep: true**，`reason` 可写「灵活用工，次优先于全职+签证」。
+8. **[K8] 后端工程匹配（允许）**: Java/Spring/Python/FastAPI 后端工程岗位，若职责体现 API 设计、鉴权、性能、工程化实践，可保留。
+
+## 输出要求（严格执行）
+1. 返回值必须是**JSON数组**，数组每一项对应一个输入岗位。
+2. 输入里每个 `job_id` 都必须出现且只出现一次，**不能遗漏、不能重复**。
+3. 结果项字段必须且仅包含：`job_id`(string), `title`(string), `keep`(boolean), `reason`(string)。
+4. `reason` 必须具体，不得为空，不得只写“匹配/不匹配”这类空泛描述。
+5. `reason` 长度控制在 12-30 个中文字符（或等价英文长度）内，保持简洁可读。
+6. `reason` 必须包含至少 1 个命中规则编号（如 `[K1]`、`[F4]`）；可包含多个编号。
+7. `reason` 固定句式：
+   - `keep: true` -> `保留：<核心依据> [Kx]` 或 `保留：<核心依据> [Kx][Ky]`
+   - `keep: false` -> `过滤：<核心依据> [Fx]` 或 `过滤：<核心依据> [Fx][Fy]`
+8. 若信息不足，默认 `keep: false`，并使用：`过滤：信息不足，按规则处理 [F6]`。
+9. 不要输出 Markdown，不要输出代码块，不要输出解释性文字。
+
+## 输出示例（仅示例，实际请按输入岗位返回）
+[
+  {"job_id": "123", "title": "AI Engineer", "keep": true, "reason": "保留：AI应用工程方向匹配 [K4]"},
+  {"job_id": "456", "title": "Backend Dev", "keep": true, "reason": "保留：后端工程实践明确 [K8]"},
+  {"job_id": "789", "title": "Senior Java Dev", "keep": false, "reason": "过滤：岗位级别过高 [F3]"},
+  {"job_id": "000", "title": "Freelance React Developer", "keep": true, "reason": "保留：灵活用工且前端相关 [K1][K7]"}
+]
+
+现在开始判断。只返回 JSON 数组。

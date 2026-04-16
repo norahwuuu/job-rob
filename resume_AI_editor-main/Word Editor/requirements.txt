@@ -1,0 +1,29 @@
+# Resume Modifier Dependencies
+
+# Word 文档处理
+python-docx==1.1.2
+
+# PDF 转换 (Windows - 使用 Word COM 接口)
+docx2pdf==0.1.8
+
+# AI 分析引擎
+openai>=1.0.0
+
+# API 服务
+fastapi==0.115.6
+uvicorn==0.34.0
+python-multipart==0.0.20
+
+# 工具库
+pydantic==2.10.4
+python-dotenv==1.0.1
+click==8.1.8
+rich==13.9.4
+
+# 系统托盘支持
+pystray==0.19.5
+Pillow>=10.0.0
+
+# 运行单元测试: pytest tests/
+pytest>=8.0.0
+

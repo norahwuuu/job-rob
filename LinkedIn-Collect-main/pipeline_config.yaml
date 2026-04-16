@@ -1,0 +1,78 @@
+linkedin:
+  username: ''
+  password: ''
+  phone_number: ''
+profile:
+  full_name: ''
+  first_name: ''
+  email: ''
+  phone_number: ''
+  resume_file_prefix: resume
+  resume_output_prefix: resume
+ai:
+  provider: gemini_relay
+  gemini_api_key: ''
+  gemini_model: gemini-2.5-flash
+  enable_pre_filter: false
+  enable_ai_pre_filter: true
+  use_llm_scoring: true
+  openai_api_key: ''
+  openai_model: gemini-2.5-flash
+  openai_base_url: https://api.vectorengine.ai
+  server_url: https://api.vectorengine.ai
+resume:
+  base_docx: ./cv.docx
+  base_json: ./resume.json
+search:
+  positions:
+  - Frontend Engineer
+  locations:
+  - Germany
+  geo_id: ''
+  time_filter: r86400
+  sort_by: R
+  max_pages: 1
+  auto_resume: false
+  experience_level:
+  - 1
+  - 2
+  - 3
+  - 4
+filter:
+  min_ai_score: 50
+  max_experience_years: 10
+  min_experience_years: 3
+  exclude_german: true
+  exclude_title_keywords: []
+  prefer_small_companies: true
+  large_company_keywords:
+  - google
+  - amazon
+  - microsoft
+  - meta
+  - apple
+  - netflix
+  - ibm
+  - oracle
+  - sap
+  - siemens
+  - adobe
+  - salesforce
+  - deloitte
+  - accenture
+  - capgemini
+  - infosys
+  - tcs
+  - deutsche bank
+  - bloomberg
+  - intel
+  - nvidia
+  small_company_bonus: 2
+  large_company_penalty: -5
+output:
+  base_dir: ./out
+  by_date: true
+advanced:
+  headless: false
+  batch_size: 1
+  llm_delay: 0.2

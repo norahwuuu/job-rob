@@ -1,0 +1,67 @@
+Job Title: Senior Backend Engineer (TypeScript, NestJS/Node.js) (m/f/x)
+Company: Atolls
+Location: 
+URL: https://www.linkedin.com/jobs/view/4397309211
+AI Score: 80
+AI Reason: 候选人的全栈背景与高级后端工程师岗位（TypeScript/Node.js）高度契合。工作地点在德国且工作语言为英语，与候选人语言能力匹配。NestJS可能需要学习。 | ✓TypeScript,Node.js | ✗NestJS
+
+===== Job Description =====
+Atolls is the world’s largest community-driven shopping platform, active in 20+ markets. 
+
+We help millions make smarter spending decisions across discovery, evaluation, and (re-)purchase by connecting people with the right brands and retailers.
+
+Our 1,000+ team across 10 countries builds products used every day at global scale, where you’ll have real ownership and see your impact. Want to shape the destinations people rely on to shop with confidence? Keep reading.
+
+About This Role:
+
+We are looking for a Senior Backend Engineer (TypeScript, NestJS/Node.js) to join our Fulfilment team in Munich or working remotely from Germany. At Atolls, your role will be instrumental in helping us enabling our customers to earn and redeem cashback on our reward platforms, creating exceptional user experiences and empowering consumers to make informed and confident shopping decisions. As a key part of our team, you’ll be directly involved in building and enhancing the digital destinations our users rely on throughout their shopping journeys.
+
+Your contributions will help shape how millions of consumers interact with our platforms, guiding them to make smart, fair, and rewarding choices.
+
+Our Benefits:
+
+At Atolls, we believe in nurturing both your professional and personal growth. Here’s what you can expect:
+
+ A culture that values personal and professional development, with internal mobility opportunities.
+ A supportive and open-minded team that embraces diverse perspectives and innovative ideas.
+ 32 days of paid vacation plus your birthday off, giving you the time you need to recharge.
+ A flexible hybrid working scheme to balance work and life.
+ Access to a learning budget and internal training to help you grow in your role.
+ Mental health coaching to support your well-being.
+ Regular global and local get-togethers to celebrate successes and build connections.
+ The possibility of taking a sabbatical after three years with the company.
+ A cloud-based company setup, providing flexibility and collaboration opportunities no matter where you are.
+These are global benefits that apply to all employees, with additional local perks based on your location.
+Responsibilities:
+
+As a Backend/ Full-Stack Engineer, you will:
+
+Design, develop, and maintain web applications and components using Node.js, TypeScript, NestJS and related technologies, ensuring adherence to coding standards and best practices.
+Collaborate with front-end developers, designers, and engineering and product managers to deliver high-quality solutions, actively participating in the full software development lifecycle.
+Troubleshoot and debug issues in existing codebases, optimizing application performance and scalability to enhance user experience.
+Integrate third-party APIs and services seamlessly, staying updated on the latest web development trends.
+Document code and processes comprehensively for future reference, while following security best practices to safeguard web application integrity and confidentiality.
+Provide technical guidance and support to junior developers as needed, contributing to team discussions and decision-making processes regarding architecture and technology selection.
+Your Profile:
+You have 6+ years of experience as a software developer.
+Knowledge of AWS technologies such as DynamoDB, Elasticsearch, relational and NoSQL databases, EventBridge and messaging and queuing solutions like SQS, SNS (or any other cloud platform like Google Cloud or Azure).
+General understanding of common design and architectural patterns, with the ability to produce elegant designs in back-end, REST API, EDA and microservice architectures.
+Logical, analytical thinking, with a structured and target-oriented approach and very good problem-solving skills.
+Passion for delivering clean code, unit/integration tests, and maintainable documentation.
+Familiarity with Agile/Scrum methodologies and DevOps best practices.
+Knowledge of common frameworks such as GitLab, Docker, and CI/CD solutions.
+Optionally, experience with GraphQL, federation and Supergraph concepts.
+Good communication skills in English.
+Our Hiring Process:
+
+TA Call: Meet one of our Talent Experts and get to know Atolls better.
+Technical Round: Focus on the technical aspects of the role (Through a Live Case), and meet your potential manager.
+Final Round: Meet other Atollians 🏝️ It varies from 1 to 3 interviews
+Some processes might slightly change according to needs
+Ready to apply?
+
+Be part of a destination where your work helps millions of people make better decisions every day. One focused application is all we need. If you truly fit more than one role, you’re welcome to apply to up to three. This helps us match you with the right opportunity faster.
+
+We review every application with equal care and will reach out if your profile aligns. Apply now with your CV in English.
+
+At Atolls, we want to ensure that all employees can thrive in an inclusive environment. Our employment opportunities are open to every gender, race, religion, age, sexual orientation, ability, place of origin, or socioeconomic status. We remain committed to a culture of diversity, equity and belonging, where all employees are welcomed, respected, connected, and engaged.

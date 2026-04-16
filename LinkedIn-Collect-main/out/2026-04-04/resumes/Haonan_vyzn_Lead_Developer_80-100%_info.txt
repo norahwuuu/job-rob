@@ -1,0 +1,72 @@
+Job Title: Lead Developer 80-100%
+Company: vyzn
+Location: 
+URL: https://www.linkedin.com/jobs/view/4397556162
+AI Score: 80
+AI Reason: 候选人作为全栈工程师，与岗位要求的Lead Developer及全栈开发职责高度匹配，具备技术领导和架构能力。但简历未体现AI/3D建模及建筑领域相关经验，这是岗位描述中的核心领域。 | ✓Full-stack development,Frontend development,Technical leadership | ✗AI/ML expertise,3D modeling domain knowledge
+
+===== Job Description =====
+Do you want to rethink how building projects are planned – not from the sidelines, but right at the heart of it?
+
+At vyzn, we’re shaping the future of construction planning with a data- and AI-driven SaaS platform. In just a few clicks, developers, planners, and architects receive precise insights on emissions, energy, comfort, and costs - based on automatically refined 3D building models - along with AI-powered recommendations to support well-informed decisions.
+
+As a Lead Developer (80–100%), you’ll be part of a team that doesn’t just think big, but also makes things happen. If you’re motivated to help shape an ambitious ETH spin-off that combines sustainability and AI, then you’re exactly who we’re looking for.
+
+Tasks
+You’ll take ownership of our technical foundation and guide a small but highly skilled development team (3–6 people). You’ll combine hands-on full-stack coding with technical leadership, ensuring that our platform remains scalable, robust, and future-ready as we expand into new markets.
+
+
+Lead the technical development of our SaaS platform - from concept to deployment
+
+Shape and evolve the software architecture to ensure scalability, performance, and maintainability
+
+Mentor the development team, fostering clean code, knowledge sharing, and best practices
+
+Collaborate closely with product and design to translate user needs into technical solutions
+
+Coordinate technical priorities with the CTO and founders
+
+Oversee code reviews, testing, and deployment pipelines
+
+
+Requirements
+
+5+ years of experience in software development, ideally in SaaS, data, or AI-driven platforms
+
+Strong skills in TypeScript/Angular, Node.js, and cloud-based architectures (Azure or AWS)
+
+Proven experience in leading small engineering teams or mentoring developers
+
+A structured, pragmatic mindset — you know when to build fast and when to build for the long term
+
+Excellent communication skills in English; German is a plus
+
+Preferably based in Switzerland or Germany (hybrid or remote with occasional workshops), or in Egypt, where part of our engineering team works (remote-friendly, on-site workshops with the Egypt team).
+
+
+Bonus
+
+
+Interest in architecture, BIM, and sustainability in the built environment
+
+Several members of our tech team are based in Egypt. Experience collaborating with teams across the MENA region, or familiarity with the culture is a plus
+
+
+Benefits
+
+Flexibility: Hybrid and remote work options to fit your lifestyle.
+
+Growth: Learn every day and develop both professionally and personally through challenging development tasks.
+
+A-Player Team: Collaborate with passionate doers who drive impact and innovation forward.
+
+Impact: Contribute to a more sustainable, livable future with solutions that benefit both people and the planet.
+
+Direct Collaboration: Work closely with the founding team and actively shape key projects.
+
+Innovation at the Intersection of AI and Construction: Be part of groundbreaking platform innovation that combines cutting-edge technology with sustainable building solutions.
+
+Long-Term Potential: Join a dynamic, growing startup with flat hierarchies, high ownership, and the opportunity for long-term collaboration.
+
+
+We look forward to your application!

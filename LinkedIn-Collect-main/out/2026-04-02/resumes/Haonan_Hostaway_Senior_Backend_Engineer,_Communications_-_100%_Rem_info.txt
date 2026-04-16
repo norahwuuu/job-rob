@@ -1,0 +1,44 @@
+Job Title: Senior Backend Engineer, Communications - 100% Remote - EMEA
+Company: Hostaway
+Location: 
+URL: https://www.linkedin.com/jobs/view/4383830191
+AI Score: 65
+AI Reason: 候选人是全栈/前端工程师，与高级后端工程师岗位存在一定专业方向差异，但若后端经验丰富仍有潜力。岗位对高并发和复杂API处理要求较高，简历未详细说明相关经验。 | ✓Backend development principles,API interaction,English fluency | ✗Deep specialization in backend architecture and scalability,Proven senior-level experience with high-volume data and complex API integrations
+
+===== Job Description =====
+Job Description
+
+ NOTE: This is a FULLY remote role, but the candidate must be within EMEA to collaborate with their team, peers, and internal customers. You do not have to be in the specific city shown in this listing, but please only apply if you are physically based within EMEA. 
+
+Trusted by 20,000+ property managers worldwide, Hostaway is an industry leading, AI-powered vacation rental management platform designed for professional short-term rental operators. Hostaway brings everything together for greater efficiency and faster growth.
+
+Profitable, high-growth, and the first short-term rental Property Management System unicorn 🦄. Join us at our most exciting stage yet! Learn more about our recent valuation and story here .
+
+About The Role
+
+Hostaway is seeking a highly motivated Senior Backend Engineer to join our Communications team. This team is responsible for the Unified Inbox module which streamlines the Guest  Host communication (email, sms, WhatsApp, OTA messages, etc.) by supporting the Property Managers with time saving AI features, automations, templates and scheduling.
+
+The Communications team is responsible for a critical part of the system and handles huge volumes of data and requests, and interacts with a variety of complex APIs - if this is something you have experience with and you are excited about you’ll be a great fit!
+
+Senior Backend Engineers at Hostaway play a crucial role in designing,building, supporting and evolving the robust, scalable, and secure backend systems that power user-facing features. You will work closely with your cross-functional team to fully own and deliver solutions that address real customer needs, ensuring our platform remains reliable and extensible as we grow.
+
+Job Requirements
+ 6+ years of experience in SaaS software development (production live product) 
+ Strong-level proficiency in PHP and/or Golang, with a strong willingness to dive into both. 
+ Experience in designing and developing RESTful web APIs 
+ Familiarity with transitioning event-driven service-oriented architectures by applying Domain Driven Design (DDD) principles 
+ Experience in writing Unit Tests and Integration Tests 
+ Proficiency in monitoring and supporting production software 
+ Experience working in a Cloud environment (AWS is a plus) 
+ Experience with message queues (e.g., AWS SQS) is a plus 
+ English language level C1 
+ What we offer: 
+ Competitive Compensation: We offer competitive pay based on market rates in the country of the applicant. 
+ 100% Remote: Enjoy the freedom to work from anywhere within your country of residence—be it a co-working space, your home office, or even your dining room table. The choice is yours. Just don’t ask to work in our office (we don’t have one). 
+ Equity: Every role in our company comes with valuable stock options in a fast-growing and profitable company. This ensures we all share in the company’s success. 
+ Values-Driven Leadership: Our Core Values are not just words we’ve written to make us feel good. We leverage them daily when making strategic and tactical decisions. 
+ Professional Growth: Our rapid growth offers unparalleled learning and development opportunities, along with a multitude of career advancement opportunities. 
+ Annual Paid Leave: The specific amounts vary by country and are aligned with country and/or contract-specific norms. 
+ Geographic Specific Benefits: As an international employer, we offer different country-specific benefits such as Health Insurance and Pensions in countries where these perks are customary. The specifics depend on the country of the applicant. 
+ Dynamic Team Culture: As a global company with team members in over 40 countries, our diverse and international culture fuels our innovation and creativity, providing a key pillar to our success (and making it a lot of fun to work here). 
+Thank you for your interest. If you apply for this role, you will receive an email from our Talent Acquisition team after your application has been reviewed alongside the qualifications for this role and the qualifications of others who have applied.

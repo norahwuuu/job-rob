@@ -1,0 +1,268 @@
+{
+  "Frontend Engineer|Germany|R": {
+    "position": "Frontend Engineer",
+    "location": "Germany",
+    "sort_by": "R",
+    "last_page": 0,
+    "updated_at": "2026-04-01 13:14:25"
+  },
+  "Frontend Developer|Germany|DD": {
+    "position": "Frontend Developer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 40,
+    "updated_at": "2026-04-15 19:47:22"
+  },
+  "Frontend Developer|Remote|DD": {
+    "position": "Frontend Developer",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 2,
+    "updated_at": "2026-04-04 12:36:27"
+  },
+  "Frontend Developer|Switzerland|DD": {
+    "position": "Frontend Developer",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 8,
+    "updated_at": "2026-04-15 19:51:58"
+  },
+  "Full Stack developer|Germany|DD": {
+    "position": "Full Stack developer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 29,
+    "updated_at": "2026-04-01 15:40:37"
+  },
+  "Full Stack developer|Remote|DD": {
+    "position": "Full Stack developer",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 19,
+    "updated_at": "2026-04-01 16:12:17"
+  },
+  "TypeScript|Remote|DD": {
+    "position": "TypeScript",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 3,
+    "updated_at": "2026-04-04 13:07:24"
+  },
+  "Frontend Engineer|Remote|DD": {
+    "position": "Frontend Engineer",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:30:37"
+  },
+  "Frontend Engineer|Germany|DD": {
+    "position": "Frontend Engineer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 38,
+    "updated_at": "2026-04-08 12:11:02"
+  },
+  "Frontend Engineer|Switzerland|DD": {
+    "position": "Frontend Engineer",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 4,
+    "updated_at": "2026-04-08 12:12:23"
+  },
+  "React|Remote|DD": {
+    "position": "React",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 3,
+    "updated_at": "2026-04-04 12:45:40"
+  },
+  "React|Germany|DD": {
+    "position": "React",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 40,
+    "updated_at": "2026-04-15 20:18:21"
+  },
+  "React|Switzerland|DD": {
+    "position": "React",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 9,
+    "updated_at": "2026-04-15 20:24:37"
+  },
+  "React Native|Remote|DD": {
+    "position": "React Native",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 2,
+    "updated_at": "2026-04-04 12:55:31"
+  },
+  "React Native|Germany|DD": {
+    "position": "React Native",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 40,
+    "updated_at": "2026-04-15 20:50:50"
+  },
+  "React Native|Switzerland|DD": {
+    "position": "React Native",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 5,
+    "updated_at": "2026-04-15 20:57:40"
+  },
+  "TypeScript|Germany|DD": {
+    "position": "TypeScript",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 40,
+    "updated_at": "2026-04-15 21:34:54"
+  },
+  "TypeScript|Switzerland|DD": {
+    "position": "TypeScript",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 12,
+    "updated_at": "2026-04-15 21:45:00"
+  },
+  "Full Stack|Remote|DD": {
+    "position": "Full Stack",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 3,
+    "updated_at": "2026-04-04 13:20:49"
+  },
+  "Full Stack|Germany|DD": {
+    "position": "Full Stack",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 9,
+    "updated_at": "2026-04-04 13:28:20"
+  },
+  "Full Stack|Switzerland|DD": {
+    "position": "Full Stack",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 3,
+    "updated_at": "2026-04-04 13:33:10"
+  },
+  "Technical Project Manager|Remote|DD": {
+    "position": "Technical Project Manager",
+    "location": "Remote",
+    "sort_by": "DD",
+    "last_page": 1,
+    "updated_at": "2026-04-04 13:34:32"
+  },
+  "Technical Project Manager|Germany|DD": {
+    "position": "Technical Project Manager",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 9,
+    "updated_at": "2026-04-04 13:37:40"
+  },
+  "Technical Project Manager|Switzerland|DD": {
+    "position": "Technical Project Manager",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 1,
+    "updated_at": "2026-04-04 13:38:54"
+  },
+  "[\"Frontend Engineer\"|Germany|DD": {
+    "position": "[\"Frontend Engineer\"",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:15:40"
+  },
+  "[\"Frontend Engineer\"|Switzerland|DD": {
+    "position": "[\"Frontend Engineer\"",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:16:52"
+  },
+  "\"Frontend Developer\"|Germany|DD": {
+    "position": "\"Frontend Developer\"",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:17:15"
+  },
+  "\"Frontend Developer\"|Switzerland|DD": {
+    "position": "\"Frontend Developer\"",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:19:02"
+  },
+  "\"React\"|Germany|DD": {
+    "position": "\"React\"",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:19:38"
+  },
+  "\"React\"|Switzerland|DD": {
+    "position": "\"React\"",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-05 12:20:44"
+  },
+  "Full Stack Engineer|Germany|DD": {
+    "position": "Full Stack Engineer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 40,
+    "updated_at": "2026-04-15 22:10:06"
+  },
+  "Full Stack Engineer|Switzerland|DD": {
+    "position": "Full Stack Engineer",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 9,
+    "updated_at": "2026-04-15 22:14:27"
+  },
+  "Software Engineer|Germany|DD": {
+    "position": "Software Engineer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 30,
+    "updated_at": "2026-04-15 22:27:41"
+  },
+  "Software Engineer|Switzerland|DD": {
+    "position": "Software Engineer",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 14,
+    "updated_at": "2026-04-15 22:36:00"
+  },
+  "Web Developer|Germany|DD": {
+    "position": "Web Developer",
+    "location": "Germany",
+    "sort_by": "DD",
+    "last_page": 29,
+    "updated_at": "2026-04-15 22:56:26"
+  },
+  "Web Developer|Switzerland|DD": {
+    "position": "Web Developer",
+    "location": "Switzerland",
+    "sort_by": "DD",
+    "last_page": 6,
+    "updated_at": "2026-04-15 23:00:49"
+  },
+  "Frontend Developer|Germany|R": {
+    "position": "Frontend Developer",
+    "location": "Germany",
+    "sort_by": "R",
+    "last_page": 4,
+    "updated_at": "2026-04-09 12:48:50"
+  },
+  "[|[|DD": {
+    "position": "[",
+    "location": "[",
+    "sort_by": "DD",
+    "last_page": 0,
+    "updated_at": "2026-04-14 19:06:23"
+  }
+}

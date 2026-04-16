@@ -1,0 +1,69 @@
+Job Title: Software Engineering Intern
+Company: Studyflash
+Location: 
+URL: https://www.linkedin.com/jobs/view/4397590196
+AI Score: 82
+AI Reason: 岗位要求积极主动、端到端交付，与候选人全栈工程师背景契合。Python和云基础设施经验需进一步确认，但作为实习岗有成长空间。 | ✓Full-Stack Development,Problem Solving,Proactivity | ✗Explicit Python proficiency,Explicit Cloud Infrastructure experience
+
+===== Job Description =====
+About the Role
+
+You'll build the AI-powered systems that let a 10-person team operate like a 50-person company.
+
+At Studyflash, we're building the learning copilot for anyone, anywhere. We bootstrapped to multi-million ARR, ranked in the top 1% for MRR growth, and were named one of Europe's hottest university spinouts. All without VC money.
+
+Every system you build directly multiplies what this team can do.
+
+Tasks
+What You'll Build
+
+
+AI agents that run entire business functions. Recent example: a multi-agentic support system that now handles >70% of customer inquiries autonomously.
+
+Platforms that eliminate manual work. Example: an influencer management system that cut >80% of manual effort.
+
+Infrastructure that scales: self-hosted services across bare-metal VMs and managed cloud, kept fast and reliable.
+
+CI/CD pipelines that make deployments from preview to production seamless.
+
+
+If something slows us down, you'll fix it.
+
+Requirements
+Who This Is For
+
+
+You ship side projects end-to-end
+
+You use coding agents daily
+
+You figure things out without waiting to be told what to do
+
+You're comfortable with Python and ideally have some experience with cloud infrastructure
+
+
+Benefits
+What We Offer
+
+
+6-month paid internship with potential full-time offer
+
+Work directly with the founders and 10x engineers
+
+Your work ships to prod from day 1
+
+Office in the heart of Zurich
+
+Free food
+
+Claude Max 20x
+
+
+Application Process
+
+
+Apply via link
+
+Take-home assignment
+
+Talk to founders

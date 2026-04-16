@@ -1,0 +1,73 @@
+Job Title: Senior Full Stack Developer React/FastAPI/Django (Frontend-Affinity) (m/f/d)
+Company: mika AI
+Location: 
+URL: https://www.linkedin.com/jobs/view/4397042932
+AI Score: 88
+AI Reason: 岗位与候选人的全栈/前端亲和力工程师定位高度匹配，技术栈（React, FastAPI, Django, PostgreSQL, AWS）高度吻合。候选人英语流利，符合工作环境。JD未明确提及签证支持，故无额外加分。 | ✓React,Full-Stack Development,Frontend Development | ✗Material UI,react-query
+
+===== Job Description =====
+mika is revolutionizing financial management for small businesses with an AI-powered platform that combines automated accounting, proactive insights, and conversational AI. We're on a mission to make expert financial navigation and compliance accessible to every small business owner – dramatically reducing costs and bureaucratic burden. We're a small, senior team shipping fast, and every line of code we ship matters.
+
+Our stack: FastAPI & Django backend, React frontend (Material UI, react-query), PostgreSQL, AWS. We build agentic AI systems that do real accounting work.
+
+Tasks
+We need a Senior Full-Stack Developer who leans frontend – someone who makes our product look and feel as good as it works under the hood.
+
+You'll own features end-to-end. That means you think through the entire user flow, edge cases, error states, and architecture before you start building. You work with high autonomy and take real ownership – we trust you to make good decisions and deliver clean solutions.
+
+Concretely, you'll:
+
+
+Drive frontend improvements – not just fixing bugs but proactively elevating UX and visual quality on a regular cadence
+
+Build and own complex full-stack features in our accounting platform
+
+Use Claude Code, Cursor, or similar AI engineering tools as your primary development workflow – we are a senior team where everyone writes high-quality code at a high pace, and this is only possible through the use of the latest coding tools. You'll get access to all the subscriptions you need to work efficiently
+
+Adapt and extend our Python/FastAPI & Django backend where needed (CRUD-level changes and beyond)
+
+Contribute to code quality and architecture decisions in a small senior team
+
+
+Requirements
+
+Professional experience in software development with a proven track record of owning and delivering complex projects.
+
+Expertise in React to build high-quality, accessible, and production-ready user interfaces.
+
+A sharp eye for design that ensures layouts and components are implemented with pixel-perfect accuracy.
+
+Hands-on skill with AI-assisted engineering using tools like Cursor, Claude Code, Codex, or GitHub Copilot. You have already built real things with those tools.
+
+The ability to work across the stack by independently navigating and extending a Python/FastAPI backend.
+
+A systems-thinking mindset to map out full features, edge cases, and failure modes before writing any code.
+
+Fluency in English, while any knowledge of German is a welcome bonus.
+
+
+Nice to have:
+
+
+Background in agentic AI systems or LLM-powered products.
+
+Familiarity with B2B fintech, PostgreSQL, or German accounting standards like DATEV.
+
+
+Benefits
+
+A small team of strong, senior engineers who respect each other's time.
+
+Real autonomy and ownership from day one.
+
+Work that's genuinely hard and interesting – German tax law + AI agents is not a solved problem.
+
+Competitive salary and a product that's actually used by real customers daily.
+
+Almost no meetings – on average 95% focus time per day.
+
+100% Remote option, option to work abroad and no minimum required office attendence.
+
+Fully flexible working hours apart from Daily Standup.
+
+Berlin location preferred but remote possible.

@@ -1,0 +1,33 @@
+At Formbricks, you have the chance to build the next generation of Experience Management software, a market with billion-dollar potential. As a Senior Frontend Engineer, you'll contribute to building popular open-source surveying infrastructure and shape the future of software that enhances user experience. We foster a culture of open feedback and view mistakes as learning opportunities, encouraging team members to take on challenging tasks and providing guidance for success.
+
+Tasks
+
+Lead the frontend development of the Formbricks XM Suite
+Work together with a small but growing team of talented engineers
+Tackle complex engineering challenges
+Research, document and communicate architectural decisions
+Get your hands dirty in the code, making sure everything is clean, scalable, and built to last. You'll set the bar for your team's tech decisions.
+Be a central point of contact for others to drive collaboration and unblock when needed
+Ensure the team follows best practices (e.g. DRY) while pushing the product forward
+Hop on 1:1 meetings to tackle individual topics and bottlenecks
+Team
+
+We are a small remote-first team located across the globe. As a startup we execute fast and ship new production-ready features week by week. We maintain a culture of open, direct and respectful feedback. We understand mistakes as the quickest way to learn and appreciate that everyone makes them — including the founding team. We encourage our team members to pick up tasks that challenge them and enjoy providing guidance to be successful.
+
+Application process
+
+Written application
+Interview call with CTO & CTO
+One-day work-trial
+
+At least 5 years of experience in software development in a product / SaaS environment.
+Deep understanding of tech and solid knowledge in TypeScript. We use React and Next.js as our main frameworks.
+Solid understanding of distributed systems and modern web architecture principles, ensuring scalable, reliable & performant solutions.
+Ability to articulate technical concepts clearly and keep your team and stakeholders informed with consistent, proactive updates.
+Excitement about how AI-based coding tools and agents increase productivity and speed up shipping.
+Passion for great design and creating fast, seamless user experiences, with a focus on browser performance and page speed optimization.
+Knowledge of design patterns, applying them when they make sense to deliver practical, solution-oriented outcomes.
+Ability to thrive in a fast-paced environment, balancing velocity with high-quality outcomes.
+Ambitious and driven to push boundaries while maintaining an eye for detail and delivering results.
+Ability to bring fun and inspiration to the team, fostering a positive, collaborative environment where creativity and ownership thrive.
+Strong collaboration skills — mentoring, sharing knowledge, and empowering your team to grow and succeed while building strong relationships within and across teams.

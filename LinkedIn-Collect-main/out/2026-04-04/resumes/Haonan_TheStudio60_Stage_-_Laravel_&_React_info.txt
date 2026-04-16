@@ -1,0 +1,39 @@
+Job Title: Stage - Laravel & React
+Company: TheStudio60
+Location: 
+URL: https://www.linkedin.com/jobs/view/4396583400
+AI Score: 88
+AI Reason: 候选人作为全栈工程师，其前端（React、SASS、Tailwind）和后端（Laravel、MySQL、PostgreSQL、API）技能与岗位核心要求高度匹配。虽然是实习岗，但技能要求与候选人背景吻合度高，且无德语要求。 | ✓Laravel,React,MySQL | ✗Gulp,UML
+
+===== Job Description =====
+Stagiaire - Laravel & React
+Lieu : Télétravail ou sur site (selon disponibilité)
+Durée : 3 à 6 mois
+Rémunération : Stage financé par votre ORP (ou programme d’insertion). Non rémunéré hors dispositif.
+Tu recherches une première expérience au sein d'une startup ?
+Rejoins notre startup pour un stage enrichissant axé sur la croissance professionnelle.
+Dans notre équipe dynamique, tu développeras des compétences clés et contribueras à des projets concrets, tout en bénéficiant d’un accompagnement pour évoluer rapidement.
+Une occasion idéale pour préparer ton avenir dans l’industrie.
+Compétences recherchéesDéveloppement web :
+Maîtrise du framework PHP Laravel :
+Eloquent ORM
+Blade
+Artisan
+Middleware
+Service Container
+MySQL, PostgreSQL
+Expérience avec les APIs RESTful / GraphQL
+SASS, Bootstrap, Tailwind
+Connaissances des outils de développement : Git, Gulp, Composer
+React :
+JSX
+Hooks (useState, useEffect)
+Composants fonctionnels
+Gestion de l’état (Context API, Redux est un plus)
+Autres technologies appréciées :
+UML
+Vue.js (atout)
+Gatsby (atout)
+Statamic (atout)
+AWS (Amazon Web Services)
+Flutter

@@ -1,0 +1,51 @@
+Job Title: Software Expert (Development & Programming) - Remote
+Company: Jobs Ai
+Location: 
+URL: https://www.linkedin.com/jobs/view/4397450224
+AI Score: 75
+AI Reason: 候选人作为前端/全栈工程师，符合软件开发专家的大方向，且英语流利。但岗位要求中列出的特定工具（如Quartus）简历中未明确体现，可能需要额外学习或不完全匹配。 | ✓Frontend Development,Full-Stack Development,Visual Studio Code | ✗Quartus,Android Studio
+
+===== Job Description =====
+Title: Software Expert (Development & Programming) - Remote
+Engagement: Hourly contract (Independent Contractor)
+Rate: USD 0–100 / hour
+Location: Remote (must have access to a physical Mac)
+Role Overview
+One of our clients is seeking experienced software development professionals to support a high-priority data collection initiative in collaboration with leading AI research labs. This role focuses on capturing real-world development and programming workflows to help AI systems better understand complex software interfaces, engineering tools, and multi-step technical processes. The work you contribute will directly support the training and evaluation of next-generation AI systems.
+Key Responsibilities
+Record screen sessions demonstrating development and programming workflows with clear verbal narration explaining each step
+Annotate screenshots of professional development software by drawing precise bounding boxes around relevant UI elements
+Follow provided staging instructions to configure specific UI states prior to recording
+Use custom capture tools to record workflows accurately and consistently
+Adhere closely to task guidelines to ensure data quality, consistency, and usability
+Deliver outputs suitable for large-scale AI research and downstream model training
+Qualifications
+Strong hands-on experience with professional development and programming tools, including:
+Visual Studio Code
+Android Studio
+Quartus
+VMware
+High attention to detail and ability to follow precise technical instructions
+Comfortable working independently and meeting tight deadlines
+Fluent English communication skills
+Access to a physical Mac and ability to create a fresh macOS user profile if required
+Nice to Have
+Prior experience with data collection, annotation, or QA work
+Experience recording or documenting development workflows
+Comfort working with new tools and staged environments
+Engagement Details
+Fully remote, asynchronous independent contractor role
+Flexible working schedule
+Project duration may vary and can be extended, shortened, or concluded based on performance and project needs
+Work includes screen recording, UI annotation, and workflow documentation
+Compensation & Contract Terms
+Hourly compensation aligned with task scope and expertise
+Payments issued weekly via Stripe or Wise
+Engagement is on an independent contractor basis
+No access to confidential or proprietary information from any employer, client, or institution
+H1-B and STEM OPT candidates cannot be supported at this time
+Eligibility
+Applicants must be legally authorized to work as independent contractors in their country of residence.
+About the Client
+Mercor partners with leading AI labs and enterprises to train frontier AI systems using real-world human expertise. Contributors collaborate with leading researchers and help shape the next generation of AI capabilities across software, engineering, and technical domains.
+Apply Now

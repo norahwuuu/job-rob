@@ -1,0 +1,17 @@
+{
+  "api_calls": 912,
+  "input_tokens": 1255875,
+  "output_tokens": 1961847,
+  "total_tokens": 3217722,
+  "estimated_cost_usd": 0.6827447250000003,
+  "by_model": {
+    "gemini-2.5-flash": {
+      "api_calls": 912,
+      "input_tokens": 1255875,
+      "output_tokens": 1961847,
+      "total_tokens": 3217722,
+      "estimated_cost_usd": 0.6827447250000003
+    }
+  },
+  "updated_at": "2026-04-16 13:49:36"
+}

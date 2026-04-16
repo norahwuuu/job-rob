@@ -1,0 +1,78 @@
+Job Title: Senior Mobile/Web Engineer - Document Management Team (m/f/d)
+Company: Raisin
+Location: 
+URL: https://www.linkedin.com/jobs/view/4373121298
+AI Score: 90
+AI Reason: 候选人是前端/全栈工程师，与岗位描述的资深移动/Web前端工程师职责高度匹配，工作语言为英语无障碍。岗位未明确提及签证支持，故不加分。 | ✓Frontend Engineering,Full-Stack Engineering,Web Development
+
+===== Job Description =====
+Raisin is the world's leading platform for savings and investment products. Founded in 2012, the FinTech connects consumers with banks in the EU, the UK and the US. This gives consumers better interest rates and banks a diversified form of refinancing. Our vision is to offer savings and investments without barriers and thus open up the global 160 trillion euro market.
+
+Raisin currently employs more than 800 people from over 75 countries worldwide. Today, the platform holds over 80 billion euros in assets from more than one million investors which have accrued over 5 billion euros in returns.
+
+Team
+
+The DMT team owns the Document Management domain, a critical area of our platform. The team is responsible for the entire document lifecycle, from document creation and ingestion to storage, validation, capture, and delivery to end users.
+
+This includes building and maintaining services that ensure documents are securely handled, compliant with regulatory requirements, and reliably accessible across internal systems and customer-facing applications.
+
+The team is currently composed of:
+
+1 Engineering Lead
+2 Backend Engineers
+1 Full-Stack Engineer
+1 Product Manager
+Your Responsibilities
+As a senior Mobile and Web Frontend Engineer, you will be delighting the customers by working on our customer-facing (both web and mobile app) platform as well as building the internal tooling for Raisin’s operations teams
+Together with your team you will own the design, implementation, and deployment of our applications
+Part of your responsibilities will be guiding features from their implementation through to testing, refinement and finally launch
+Working closely with our product UX team to find practical and efficient solutions to complex problems is also part of your responsibilities 
+You are actively participating in an agile and collaborative process in a cross-functional team with end-to-end ownership
+Finally, you are responsible for continuously improving your team as well as yourself
+Your Profile
+
+Experience: University degree in Computer Science or related fields or equivalent practical experience. At least 5 years as a React / React Native developer, with a strong record of delivering high-quality, performant mobile applications for iOS and Android platforms.
+
+Technical skills:
+
+Proficiency in React, React Native, React Hooks, Redux, Nx (or similar tools)
+Strong proficiency in TypeScript, JavaScript, CSS, and HTML.
+You have strong experience with React or similar Frameworks / Libraries
+Familiarity with CSS-in-JS like styled-components
+Experience with Next.js, Static Site Generators, the JAM-Stack, (headless-) Content Management Systems and material-ui is a plus
+App lifecycle expertise: Hands-on experience with integration, testing, code signing, and deploying apps through app stores, along with familiarity with CI/CD pipelines like GitLab, Fastlane, and Expo EAS.
+
+API knowledge: Experience working with RESTful APIs and GraphQL, as well as integrating third-party SDKs and libraries into mobile applications.
+
+Monitoring and debugging: Familiarity with tools like Datadog or Firebase Crashlytics to monitor performance and debug production issues.
+
+Security practices: A strong understanding of mobile app security, including secure authentication (OAuth, JWT), encryption, and data privacy compliance.
+
+Native module management: Knowledge of creating and managing native modules for iOS and Android to enable seamless interaction between Native and React Native components.
+
+Testing: Experience with unit testing (or TDD) using Jest and Enzyme, with familiarity in E2E testing tools like Detox or Maestro as a plus.
+
+Design systems: Experience working with design systems and tools like Storybook to create consistent and reusable components.
+
+Soft skills: Excellent analytical and communication skills in English.
+
+Join our mission, join our team – and grow with us!
+
+At Raisin, we care about each other and it is one of our top priorities to foster an open and caring environment in which everyone feels welcome and comfortable. Our culture is strongly driven by our ambitious team, which connects more than 75 different nationalities.
+
+As part of our team, you will benefit from:
+
+Raisin SE Germany & Raisin Bank AG
+Employee Development Budget of €2,000 and four full training days per year.
+Flexible working hours, home office and 30 vacation days.
+A company pension scheme (Betriebliche Altersvorsorge), which we support with 20%.
+Enjoy more than 50+ different sports with Urban Sports Club: We subsidize your membership with more than €20 per month. 
+Do you miss being in the office? The Deutschland Ticket gets you there, which we subsidize with €25 per month.
+Love cycling? With JobRad, lease the bike of your choice and enjoy tax savings, plus Raisin covers your monthly insurance costs.
+Hungry all the time? Snacks, daily fresh fruit as well as drinks provided at the office.
+You are moving from another country or city to join us? We may support your relocation.
+Raisin Applicant Privacy Policy
+
+We value diversity and the unique experiences each individual brings. If you’re excited about this role but don’t meet every requirement, we still encourage you to apply.
+
+We are an equal opportunity employer and are committed to creating an inclusive environment for everyone, regardless of race, colour, ancestry, religion, sex, national origin, sexual orientation, age, citizenship, marital status, disability, or gender identity.

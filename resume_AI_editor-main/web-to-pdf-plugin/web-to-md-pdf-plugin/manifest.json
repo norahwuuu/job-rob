@@ -1,0 +1,25 @@
+{
+    "manifest_version": 3,
+    "name": "简历优化助手",
+    "version": "2.1",
+    "description": "从招聘网页提取职位描述，一键优化简历并下载。支持多页面并行处理。",
+    "permissions": [
+      "activeTab",
+      "scripting",
+      "downloads",
+      "storage",
+      "notifications",
+      "alarms"
+    ],
+    "host_permissions": [
+      "http://127.0.0.1:8000/*",
+      "http://localhost:8000/*"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html",
+      "default_title": "简历优化助手"
+    }
+  }

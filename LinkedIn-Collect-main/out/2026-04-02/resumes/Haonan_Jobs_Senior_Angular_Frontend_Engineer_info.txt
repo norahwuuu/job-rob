@@ -1,0 +1,81 @@
+Job Title: Senior Angular Frontend Engineer (m/f/x) - Satellytes Digital Consulting GmbH
+Company: Jobs via eFinancialCareers
+Location: 
+URL: https://www.linkedin.com/jobs/view/4392945638
+AI Score: 88
+AI Reason: 岗位与候选人高级前端/全栈工程师的定位高度匹配，特别是高级Angular前端工程师的职责。JD虽为德语，但未明确要求德语为工作语言，候选人B1德语和流利英语可应对。未提及签证支持，因此不加首选分。 | ✓Frontend Development,Angular,Modern Web Technologies
+
+===== Job Description =====
+Wir sind stolz auf unsere Lernkultur und professionelles Miteinander auf Augenhöhe. Alle Kolleg:innen egal ob aufstrebender oder erfahrener Engineer, werden bei uns gefördert und finden spannende Möglichkeiten sich weiterzuentwickeln. Wir arbeiten für große und namhafte Versicherungen, Handelsketten und Technologiekonzerne. Wir helfen deren Geschäfte innovativ ins Web zu bringen.
+
+Tätigkeiten
+
+Wir arbeiten als Dienstleister für verschiedene Enterprise-Kunden. Deshalb variieren deine Aufgaben von Kunde zu Kunde.
+
+Deine möglichen Bereiche:
+
+ Erstelle und erweitere Anwendungen unserer Kunden (B2B & B2C, ganze Web-Applikationen) 
+ Erstelle Entwickler-Libraries inkl. Release Management, Changelogs & Breaking Changes 
+ Greenfield-Projekte: Wir brauchen dich als Senior, um bei Neukunden neue Projekte umzusetzen - auch wenn mal die Requirements noch nicht ganz klar sind. Vom Aufbau der Software bis zur Bereitstellung einer Coding-Umgebung für das nachrückende Team. 
+Dein Tagesablauf:
+
+ Implementiere das Frontend mit modernen Webtechnologien 
+ Erstelle Features, UI-Komponenten, kümmere dich um Barrierefreiheit (a11y), schreibe Unit & E2E Tests, behebe Bugs 
+ Bringe deine Ideen in unseren Projekten ein. 
+ Teile dein Wissen: Mentoring, Pair Programming & Code Reviews 
+ Technical Writing: Erkläre Problemstellungen, Lösungen, technische Herausforderungen oder schreibe Dokumentationen für unsere technische Audienz. 
+ Du achtest auf deine Kollegen und ermunterst sich aktiv zu best practices im Schreiben von Code und der Kommunikation untereinander. 
+ Frontend-Architekturen entwirfst du nicht leichtfertig mit dem goldenen Hammer. Dein Team und der Kunde erwarten von dir bewusste und erklärbare Entscheidungen. 
+ Helfe unseren Kunden interne Prozesse durch moderne KI Lösungen (z.B. Agentic Flows, MCPs und LLM Evals) zu optimieren 
+Unser, bzw. der Tech Stack unser Kunden, beinhaltet oft folgende Technologien:
+
+ React & Angular 
+ GitHub Actions & Jenkins 
+ Jest & Cypress, Testing Library 
+ Node oder Java im Backend 
+ Für interne Projekte verwenden wir einen bunten Strauss: Ruby on Rails, Vue, Next 
+Anforderungen
+ Professionelle Industrieerfahrung von typischerweise mindestens 5 Jahren als Frontend-Entwickler:in 
+ Dein Verständnis von TypeScript, Angular, CSS, Accessibility und Testing muss sitzen. Kleine Lücken füllst du bei deiner Arbeit im Team. 
+ CI/CD Erfahrung sollte vorhanden sein. Sei es GitHub Action, Jenkins oder CircleCI, mit irgendwas aus diesem Bereich solltest du im Lauf deiner Karriere in Kontakt gekommen sein. 
+ Als Frontend-Entwickler:in solltest du eine Auge für Details & Ästhetik mitbringen 
+Team
+
+Dein Team besteht in der Regel aus 4-6 Personen gemischt aus Senior & Mid-Level Engineers und Designer:innen. Als Senior Frontend Entwickler kannst du dich entweder auf die Technik & Umsetzung fokussieren oder dich als Lead hervortun, um gegenüber deinen Kollegen und dem Kunden in die technische Führung zu gehen.
+
+Bewerbungsprozess
+
+Keine Coding Aufgaben und Whiteboards. Speziell präparierte Code Reviews mit einem Zeitaufwand von ca. 1.5h.
+
+ Kennenlernen 
+ Technisches Interview 
+ Nachgespräch/Entscheidung 
+Über das Unternehmen
+
+Wir sind Experten:innen für große Herausforderungen rund ums Web. Wir unterstützen leidenschaftlich mittelgroße bis große Unternehmen bei der Erstellung individueller Software. Wir helfen Ideen und Anforderungen zu formen und setzen diese gemeinsam mit den Kunden um.
+
+Wir haben wertvolles Wissen und konkrete Erfahrung in den Märkten Banken, Versicherungen, Automotive und Sport.
+
+Digitale Plattformen
+
+Wir sind Spezialist:innen für digitale Plattformen. Von der Idee bis zur Umsetzung. Unsere langjährige Erfahrung bei der Gestaltung von B2B- und B2C-Plattformen aus den unterschiedlichsten Branchen macht uns zum idealen Partner für Ihr Projekt.
+
+Digital Platform Design & Development
+Low-Code Systems
+Design Systeme
+Infrastruktur & Automation
+Product & Service Design
+
+Digitale Produkte und Services sind unsere Königsdisziplin. Unabhängig davon, ob Sie noch ganz am Anfang stehen oder schon einen ausgearbeiteten Plan haben: unsere Expert:innen tragen gern zum Erfolg Ihrer Idee bei - und bringen ihre eigenen ein.
+
+Entwicklung von Design Systemen & Style Guides
+Product Development für Web, Apps und Services
+Prototyping, Design Thinking/Sprints
+Digital-Strategie und -Consulting
+Consulting
+
+Die langjährige Erfahrung unserer Mitarbeitenden ist unser wertvollster Schatz. Wir öffnen unsere Schatztruhe gern für Sie - und beraten Sie in technischen und konzeptionellen Angelegenheiten.
+
+Schulungen & Workshops
+Technische Analyse
+UX/UI Analysen & Reports

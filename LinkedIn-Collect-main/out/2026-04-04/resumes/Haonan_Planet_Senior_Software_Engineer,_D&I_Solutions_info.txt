@@ -1,0 +1,93 @@
+Job Title: Senior Software Engineer, D&I Solutions
+Company: Planet
+Location: 
+URL: https://www.linkedin.com/jobs/view/4384881536
+AI Score: 85
+AI Reason: 候选人作为全栈工程师，与岗位对应用开发和DevOps能力的需求高度契合。岗位无德语要求，且支持全球远程工作，但未明确提及签证赞助。 | ✓Frontend Development,Backend Development,Full-Stack Engineering | ✗Advanced DevOps Tools (e.g., Kubernetes, specific cloud platforms),Defense & Intelligence Domain Knowledge
+
+===== Job Description =====
+Welcome to Planet. We believe in using space to help life on Earth.
+
+Planet designs, builds, and operates the largest constellation of imaging satellites in history. This constellation delivers an unprecedented dataset of empirical information via a revolutionary cloud-based platform to authoritative figures in commercial, environmental, and humanitarian sectors. We are both a space company and data company all rolled into one.
+
+Customers and users across the globe use Planet's data to develop new technologies, drive revenue, power research, and solve our world’s toughest obstacles.
+
+As we control every component of hardware design, manufacturing, data processing, and software engineering, our office is a truly inspiring mix of experts from a variety of domains.
+
+We have a people-centric approach toward culture and community and we strive to iterate in a way that puts our team members first and prepares our company for growth. Join Planet and be a part of our mission to change the way people see the world.
+
+Planet is a global company with employees working remotely world wide and joining us from offices in San Francisco, Washington DC, Germany, Austria, Slovenia, and The Netherlands.
+
+About The Role
+
+The Global Monitoring Service (GMS) App Team is hiring for a Senior Software Engineer to ensure fast, secure, and reliable releases through the team’s DevOps capabilities. The GMS App Team is responsible for providing a customized application for Defense & Intelligence customers from around the world. This application provides daily, near-real time monitoring and analytic insights on customer-defined sites built atop Planet’s satellite data.
+
+This is a full-time, remote position based in either Germany, the Netherlands or Slovenia. If located near an office, you are expected to work from that office 3 days per week.
+
+Impact You’ll Own
+Own the container-based application lifecycle, bi-weekly releases, and CI/CD pipelines for GMS.
+Organize and execute migrations as the service evolves.
+Manage deployments on customer-isolated Kubernetes clusters running stateful applications, persistent storage, and infrastructure-as-code (manifests/Makefiles), closely partnering with infrastructure teams to ensure operational and performance needs are met.
+Ensure high availability and performance by meeting contractual SLAs through proactive monitoring and alert response, including participation in a 24x7 on-call rotation.
+Rapidly debug and resolve complex issues surfaced by customers or internal monitoring.
+Own auth for GMS resources and provide full stack technical expertise to customer-facing teams to fulfill service obligations.
+Manage terraform deployments for data pipelines.
+What You Bring
+10+ years of software engineering experience with a focus on infrastructure or DevOps, specifically deploying and managing containers.
+Bachelor’s Degree in Computer Science or a similar field.
+Hands-on experience with Kubernetes and stateful applications, persistent storage, and node pool isolation in Kubernetes.
+Track record of owning and optimizing CI/CD pipelines and managing infrastructure via Makefiles and manifests.
+Practical knowledge of secrets management and security best practices within a cloud-native environment.
+Experience participating in on-call rotations and participating in blameless postmortems.
+Ability to monitor complex distributed systems with established SLAs and SLOs and a commitment to meeting strict performance SLOs and contractual obligations.
+A high degree of independence and a sense of ownership over the full deployment lifecycle.
+Experience deploying in secured customer environments.
+Willingness to collaborate across multiple time zones and travel quarterly for team alignment.
+Evolve systems and services intentionally and responsibly using Architectural Decision Records among stakeholders.
+Experience managing data pipelines, particularly with dbt.
+What Makes You Stand Out
+Experience working with Defense & Intelligence customers.
+Operational experiences with SQL and noSQL data stores.
+Experience with Google Cloud Platform and Grafana.
+Experience authoring Kubernetes custom resources (CRDs).
+Experience contributing to open source projects.
+Involvement with Geospatial software community.
+Familiarity with front end development practices.
+Background in Professional Services, customer-facing deployment, and solutions optimization.
+Application Deadline
+
+May 18, 2026 by 11:59p / 23:59 CET (Central European Time)
+
+Benefits While Working At Planet
+
+These offerings are dependent on employment type and geographical location, based upon applicable law or company policy.
+Paid time off including vacation, holidays and company-wide days off 
+Employee Wellness Program 
+Home Office Reimbursement
+Monthly Phone and Internet Reimbursement
+Tuition Reimbursement and access to LinkedIn Learning
+Equity 
+Volunteering Paid Time Off
+San Francisco Fair Chance Ordinance
+
+Pursuant to the San Francisco Fair Chance Ordinance, we will consider for employment qualified applicants with arrest and conviction records.
+
+Why We Care So Much About Belonging.
+
+We’re dedicated to helping the whole Planet, and to do that we must strive to represent all of it within each of our offices and on all of our teams. That’s why Planet is guided by an ultimate north star of Belonging—dreaming big as we approach our ongoing work. If this job intrigues you, but you’re thinking you might not have all the qualifications, please... do apply! At Planet, we are looking for well-rounded people from around the world who can contribute to more ways than just what is listed in this job description. We don’t just fill positions, we aspire to fulfill people’s careers, most excited about folks who are motivated by our underlying humanitarian efforts. We are a few orbits around the sun before we get to where we want to be, so we hope you’re excited to come along for the ride.
+
+EEO Statement
+
+Planet is committed to building a community where everyone belongs and we invite people from all backgrounds to apply. Planet is an equal opportunity employer, and committed to providing employment opportunities regardless of race, religious creed, color, national origin, ancestry, physical disability, mental disability, medical condition, genetic information, marital status, sex, gender, gender identity, gender expression, pregnancy, childbirth and breastfeeding, age, sexual orientation, military or veteran status, or any other protected classification, in accordance with applicable federal, state, and local laws. Know Your Rights.
+
+Accommodations
+
+Planet is an inclusive community and we know that everyone has their own needs. If you have a disability or special need that requires accommodation during the hiring process, please reach out to accommodations@planet.com or contact your recruiter with your request. Your message will be confidential and we will be happy to assist you.
+
+Privacy Policy: By clicking "Apply Now" at the top of this job posting, I acknowledge that I have read the Planet Data Privacy Notice for California Staff Members and Applicants, and hereby consent to the collection, processing, use, and storage of my personal information as described therein.
+
+Privacy Policy (European Applicants): By clicking "Apply Now" at the top of this job posting, I acknowledge that I have read the Candidate Privacy Notice GDPR Planet Labs Europe, and hereby consent to the collection, processing, use, and storage of my personal information as described therein.
+
+AI in Our Interviewing Process: Planet is committed to providing an exceptional interview experience for all candidates. We are currently exploring AI interviewing technologies to better focus on candidates and less on trying to capture notes. As such, with the candidate's consent, select interviews may be recorded and include a Planet AI Notetaker for transcription and summarization purposes. Should an interview involve use of AI interview technologies, the candidate will receive notification and have the ability to opt out both in advance and/or real-time. Opting out will not affect one's candidacy.
+
+Candidate AI Policy: Planet embraces Artificial Intelligence (AI) tools, and we encourage its responsible use. We understand that candidates may use various resources, including AI tools, to prepare for interviews and assessments. However, during any live interview stage or when actively completing assessments for this position, the use of AI tools—e.g. Large Language Models (LLMs), deep fake technology, etc.—is strictly prohibited unless explicitly prompted by an interviewer or assessment instructions. If you are unsure about acceptable use, please contact your recruiter for clarification. If an AI tool or similar technology is desired as an accommodation, please contact accommodations@planet.com with your request for assistance. Your message will be confidential, and we will be happy to assist you. Violation of this policy may result in disqualification of your application.

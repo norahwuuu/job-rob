@@ -1,0 +1,33 @@
+Job Title: Full Stack Developer
+Company: $65/hr Remote
+Location: 
+URL: https://www.linkedin.com/jobs/view/4393840884
+AI Score: 78
+AI Reason: 候选人作为全栈工程师，与岗位职责高度契合，尤其在前端技术栈（React, Vue.js, Bootstrap）方面匹配度高。部分后端/数据/云平台技能可能需要进一步确认或学习。该岗位为小时合同制，不适用全职/签证加分。 | ✓React,Vue.js,Bootstrap | ✗Kafka,Spark
+
+===== Job Description =====
+Position: Web and Digital Interface Designers
+Type: Hourly contract
+Compensation: $20 - $65/hour
+Location: Remote
+Commitment: 10–40 hours/week
+Role Responsibilities
+Design and develop intuitive and visually engaging digital interfaces.
+Collaborate with developers and stakeholders to integrate web and e-commerce solutions.
+Conduct user research to refine interface design and user experience.
+Resolve technical issues in coordination with hosting and network teams.
+Optimize interface performance using modern frameworks and tools.
+Contribute insights to improve AI training for digital interface systems.
+Communicate design decisions and collaborate across cross-functional teams.
+Requirements
+Strong experience with web technologies including React, Vue.js, and Bootstrap.
+Proficiency in backend and data tools such as SQL, Kafka, and Spark.
+Strong experience in programming languages like Java, Scala, Swift, and jQuery.
+Familiarity with cloud platforms and systems such as EC2 and Windows Server.
+Understanding of algorithms and scalable system design.
+Excellent written and verbal communication skills.
+Ability to work independently in a remote, collaborative environment.
+Application Process (Takes 20 Min)
+Easy Apply on LinkedIn
+Check email for next steps
+Participate in resume evaluation & interview stage
