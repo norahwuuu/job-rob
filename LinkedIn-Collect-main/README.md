@@ -98,6 +98,10 @@ PIPELINE__OUTPUT__BY_DATE=true
 ../.venv/bin/python run_pipeline.py generate --limit 5
 ../.venv/bin/python run_pipeline.py generate --min-score 50
 
+# 说明：
+# - 每次 AI 成功生成新的 docx 后，会自动在同目录转成 pdf（使用 LibreOffice）
+# - 若 AI 简历生成失败，程序会立即停止，并记录到 out/logs/resume_failures.log
+
 # 重新 LLM 评分（jobs_progress 里 ai_reason 为「LLM评分失败」或「未获取到评分」）
 ../.venv/bin/python run_pipeline.py rescore-llm
 ../.venv/bin/python run_pipeline.py rescore-llm --limit 30
@@ -118,6 +122,76 @@ PIPELINE__OUTPUT__BY_DATE=true
 ```
 
 `run_pipeline.py status` 现会额外显示 `out/token_usage.json` 的历史累计 LLM token 与预估费用。
+
+## 状态与输出文件
+
+### 主状态值
+
+程序现在统一使用以下英文状态值：
+
+- `discovered`：岗位已爬取并写入主清单，但还没有成功生成定制简历
+- `resume_ready`：定制简历已成功生成，`resume_path` 已落盘，可继续申请
+- `applied`：已完成申请
+- `skipped`：被手动或程序显式跳过
+- `failed`：申请阶段失败，可后续重试或人工处理
+- `closed`：岗位已关闭或不再继续处理
+
+兼容说明：
+
+- 旧数据里的 `pending` 会自动按 `discovered` 解释
+- 旧数据里的 `resume_generated` 会自动按 `resume_ready` 解释
+- 程序后续写回时会优先使用新的 canonical 状态值
+
+### 主要文件职责
+
+- `out/jobs_progress.json`
+  - 主岗位清单，也是最重要的 source of truth
+  - 记录爬取结果、AI 评分、当前状态、`resume_path`
+  - 你要查“爬到了什么、评成功没、简历是否成功生成”，优先看这个文件
+
+- `out/quota_skipped_jobs.json`
+  - 配额或限流导致需要补跑的重试队列
+  - 不是通用状态文件
+  - 主要配合 `rescore-llm --quota-skipped` 使用
+
+- `out/logs/resume_failures.log`
+  - AI 简历生成失败日志
+  - 记录失败时间、岗位信息、链接和具体错误
+
+- `out/application_tracker.json`
+  - 历史兼容进度缓存
+  - 主要用于 `status`、`done`、`skip` 等流程辅助
+  - 主岗位事实仍以 `out/jobs_progress.json` 为准
+
+- `out/apply_results.json`
+  - Auto Apply 阶段的结果输出
+
+- `out/token_usage.json`
+  - 累计 token 与费用统计
+
+### 日期目录中的产物
+
+- `out/<当天>/resumes/`
+  - AI 定制生成的原始简历文件
+  - 通常会看到同名 `.docx` 与 `.pdf`
+
+- `out/<当天>/easy_apply/`
+  - Easy Apply 使用的成品文件
+  - 包括申请用 PDF、岗位链接、岗位信息摘要
+
+- `out/<当天>/manual_apply/`
+  - 手动申请使用的成品文件
+  - 包括 PDF、官网/LinkedIn 链接、岗位信息摘要、待申请列表
+
+### 常见问题对应看哪里
+
+- 爬取到了哪些岗位：`out/jobs_progress.json`
+- 哪些岗位评分失败：`out/jobs_progress.json` 中 `ai_reason` 包含 `LLM评分失败` 或 `未获取到评分`
+- 哪些岗位评分成功：`out/jobs_progress.json` 中已有正常 `ai_score` / `ai_reason`
+- 哪些岗位已生成简历：`out/jobs_progress.json` 中 `status = "resume_ready"`，并查看 `resume_path`
+- 简历文件本身在哪：`out/<当天>/resumes/`
+- 申请成品文件在哪：`out/<当天>/easy_apply/` 或 `out/<当天>/manual_apply/`
+- 简历生成失败看哪里：`out/logs/resume_failures.log`
 
 ## 建议参数（稳定优先）
 
@@ -151,7 +225,8 @@ PIPELINE__OUTPUT__BY_DATE=true
 
 你应在日志中看到类似：
 - `Word Editor AI请求参数 ... base_url=.../v1`
-- 若外部网络波动，可能出现 `Connection error.`，此时会回退到基础简历并继续流程（属于预期容错行为）。
+- 若 AI 简历生成失败，程序会立即停止；详细原因会写入 `out/logs/resume_failures.log`
+- 若 PDF 生成正常，你会在 `out/<当天>/resumes/` 目录同时看到同名 `.docx` 与 `.pdf`
 
 ## 常见问题
 
@@ -164,8 +239,8 @@ PIPELINE__OUTPUT__BY_DATE=true
   - 解决：降低 `batch_size`、提高 `llm_delay`、减小 `max_pages`，或更换可用中转 API Key
 
 - 简历“看起来生成了但没改内容”
-  - 常见于 LLM 调用失败回退到基础简历
-  - 先检查日志中的 Word Editor / OpenAI 兼容接口错误信息
+  - 现在不会再回退到基础简历；AI 简历生成失败会直接停止
+  - 先检查终端日志与 `out/logs/resume_failures.log`
   - 重点确认日志里 `base_url` 是否为 `.../v1`（程序会自动规范化）
 
 - `JSON 解析失败` 且响应前几百字符是 HTML

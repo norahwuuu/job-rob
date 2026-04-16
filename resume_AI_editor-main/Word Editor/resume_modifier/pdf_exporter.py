@@ -13,9 +13,8 @@ import platform
 class PDFExporter:
     """
     PDF 导出器
-    
-    在 Windows 上使用 docx2pdf（调用 Word COM 接口）
-    在其他平台上使用 LibreOffice
+
+    统一使用 LibreOffice 将 Word 文档转换为 PDF。
     """
     
     def __init__(self):
@@ -25,34 +24,34 @@ class PDFExporter:
     
     def _check_dependencies(self):
         """检查依赖是否满足"""
-        if self.system == "Windows":
-            # Windows 使用 docx2pdf
-            try:
-                import docx2pdf
-                self.converter = "docx2pdf"
-            except ImportError:
-                # 尝试使用 LibreOffice
-                if self._check_libreoffice():
-                    self.converter = "libreoffice"
-                else:
-                    raise RuntimeError(
-                        "未找到 PDF 转换器。请安装 docx2pdf (pip install docx2pdf) "
-                        "或安装 LibreOffice。"
-                    )
+        if self._check_libreoffice():
+            self.converter = "libreoffice"
         else:
-            # Linux/Mac 使用 LibreOffice
-            if self._check_libreoffice():
-                self.converter = "libreoffice"
-            else:
-                raise RuntimeError(
-                    "未找到 LibreOffice。请安装 LibreOffice 以支持 PDF 转换。"
-                )
+            raise RuntimeError(
+                "未找到 LibreOffice。请安装 LibreOffice 以支持 PDF 转换。"
+            )
     
     def _check_libreoffice(self) -> bool:
         """检查 LibreOffice 是否可用"""
         try:
-            # 尝试不同的命令名
-            for cmd in ["libreoffice", "soffice", "soffice.exe"]:
+            # 优先尝试环境变量或系统常见安装路径
+            candidates = []
+            env_cmd = os.environ.get("LIBREOFFICE_CMD", "").strip()
+            if env_cmd:
+                candidates.append(env_cmd)
+            candidates.extend([
+                "libreoffice",
+                "soffice",
+                "soffice.exe",
+                "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            ])
+
+            # 去重并依次探测
+            seen = set()
+            for cmd in candidates:
+                if not cmd or cmd in seen:
+                    continue
+                seen.add(cmd)
                 try:
                     result = subprocess.run(
                         [cmd, "--version"],
@@ -95,34 +94,7 @@ class PDFExporter:
         pdf_path.parent.mkdir(parents=True, exist_ok=True)
         
         # 执行转换
-        if self.converter == "docx2pdf":
-            return self._convert_with_docx2pdf(docx_path, pdf_path)
-        else:
-            return self._convert_with_libreoffice(docx_path, pdf_path)
-    
-    def _convert_with_docx2pdf(self, docx_path: Path, pdf_path: Path) -> str:
-        """使用 docx2pdf 转换（Windows）"""
-        import sys
-        from docx2pdf import convert
-        
-        # 在线程中使用COM需要先初始化
-        import pythoncom
-        pythoncom.CoInitialize()
-        
-        try:
-            print("📄 正在导出 PDF（可能需要 3-5 秒）...", flush=True)
-            
-            # docx2pdf.convert() 需要字符串路径
-            convert(str(docx_path), str(pdf_path))
-            
-            if not pdf_path.exists():
-                raise RuntimeError(f"PDF 转换失败，输出文件不存在: {pdf_path}")
-            
-            print("✅ PDF 导出完成", flush=True)
-            return str(pdf_path)
-        finally:
-            # 确保释放COM
-            pythoncom.CoUninitialize()
+        return self._convert_with_libreoffice(docx_path, pdf_path)
     
     def _convert_with_libreoffice(self, docx_path: Path, pdf_path: Path) -> str:
         """使用 LibreOffice 转换"""

@@ -51,6 +51,53 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelnam
 log.addHandler(file_handler)
 
 
+# ============================================================
+# 状态与产物语义
+# ============================================================
+STATUS_DISCOVERED = "discovered"
+STATUS_RESUME_READY = "resume_ready"
+STATUS_APPLIED = "applied"
+STATUS_SKIPPED = "skipped"
+STATUS_FAILED = "failed"
+STATUS_CLOSED = "closed"
+
+LEGACY_STATUS_ALIASES = {
+    "pending": STATUS_DISCOVERED,
+    "resume_generated": STATUS_RESUME_READY,
+}
+
+CANONICAL_STATUS_PRIORITY = {
+    STATUS_APPLIED: 5,
+    STATUS_CLOSED: 4,
+    STATUS_FAILED: 3,
+    STATUS_RESUME_READY: 2,
+    STATUS_DISCOVERED: 1,
+}
+
+PENDING_LIFECYCLE_STATUSES = {STATUS_DISCOVERED, STATUS_RESUME_READY}
+TERMINAL_LIFECYCLE_STATUSES = {STATUS_APPLIED, STATUS_SKIPPED, STATUS_CLOSED}
+
+
+def normalize_job_status(status: Any, default: str = STATUS_DISCOVERED) -> str:
+    """将旧状态值映射到新的 canonical 状态。"""
+    value = str(status or "").strip()
+    if not value:
+        return default
+    return LEGACY_STATUS_ALIASES.get(value, value)
+
+
+def is_pending_lifecycle_status(status: Any) -> bool:
+    return normalize_job_status(status) in PENDING_LIFECYCLE_STATUSES
+
+
+def is_terminal_lifecycle_status(status: Any) -> bool:
+    return normalize_job_status(status) in TERMINAL_LIFECYCLE_STATUSES
+
+
+def status_sort_priority(status: Any) -> int:
+    return CANONICAL_STATUS_PRIORITY.get(normalize_job_status(status), 0)
+
+
 def normalize_openai_base_url(raw_url: str) -> str:
     """
     规范化 OpenAI 兼容接口 base_url。
@@ -639,13 +686,13 @@ class JobStatus:
     is_easy_apply: bool
     url: str
     job_description: str = ""
-    status: str = "pending"  # pending, resume_generated, applied, skipped, failed
+    status: str = STATUS_DISCOVERED  # canonical: discovered, resume_ready, applied, skipped, failed, closed
     resume_path: str = ""
     applied_at: str = ""
     
     
 class ProgressTracker:
-    """进度追踪器"""
+    """进度追踪器（历史兼容层，主权威文件仍是 jobs_progress.json）。"""
     
     TRACKER_FILE = "application_tracker.json"
     APPLIED_FILE = "applied_jobs.json"
@@ -664,6 +711,7 @@ class ProgressTracker:
                 with open(self.tracker_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     for job_id, job_data in data.items():
+                        job_data["status"] = normalize_job_status(job_data.get("status"))
                         self.jobs[job_id] = JobStatus(**job_data)
                 log.info(f"加载进度: {len(self.jobs)} 个岗位")
             except Exception as e:
@@ -695,23 +743,24 @@ class ProgressTracker:
         """更新状态"""
         job_id = str(job_id)
         if job_id in self.jobs:
-            self.jobs[job_id].status = status
+            normalized_status = normalize_job_status(status)
+            self.jobs[job_id].status = normalized_status
             if resume_path:
                 self.jobs[job_id].resume_path = resume_path
-            if status == "applied":
+            if normalized_status == STATUS_APPLIED:
                 self.jobs[job_id].applied_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.save()
     
     def is_already_processed(self, job_id: str) -> bool:
         """检查是否已处理"""
         job_id = str(job_id)
-        return job_id in self.jobs and self.jobs[job_id].status in ["applied", "skipped"]
+        return job_id in self.jobs and is_terminal_lifecycle_status(self.jobs[job_id].status)
     
     def get_pending_jobs(self, is_easy_apply: bool = None) -> List[JobStatus]:
         """获取待处理岗位"""
         result = []
         for job in self.jobs.values():
-            if job.status in ["pending", "resume_generated"]:
+            if is_pending_lifecycle_status(job.status):
                 if is_easy_apply is None or job.is_easy_apply == is_easy_apply:
                     result.append(job)
         return sorted(result, key=lambda x: x.ai_score, reverse=True)
@@ -726,12 +775,12 @@ class ProgressTracker:
         easy_apply = [j for j in self.jobs.values() if j.is_easy_apply]
         manual = [j for j in self.jobs.values() if not j.is_easy_apply]
         
-        easy_applied = len([j for j in easy_apply if j.status == "applied"])
-        easy_pending = len([j for j in easy_apply if j.status in ["pending", "resume_generated"]])
-        easy_failed = len([j for j in easy_apply if j.status == "failed"])
+        easy_applied = len([j for j in easy_apply if normalize_job_status(j.status) == STATUS_APPLIED])
+        easy_pending = len([j for j in easy_apply if is_pending_lifecycle_status(j.status)])
+        easy_failed = len([j for j in easy_apply if normalize_job_status(j.status) == STATUS_FAILED])
         
-        manual_applied = len([j for j in manual if j.status == "applied"])
-        manual_pending = len([j for j in manual if j.status in ["pending", "resume_generated"]])
+        manual_applied = len([j for j in manual if normalize_job_status(j.status) == STATUS_APPLIED])
+        manual_pending = len([j for j in manual if is_pending_lifecycle_status(j.status)])
         
         print("\n" + "=" * 60)
         print("📊 申请进度")
@@ -750,7 +799,7 @@ class ProgressTracker:
         
         if manual_pending > 0:
             print("待处理的手动申请:")
-            pending_manual = sorted([j for j in manual if j.status in ["pending", "resume_generated"]], 
+            pending_manual = sorted([j for j in manual if is_pending_lifecycle_status(j.status)], 
                                    key=lambda x: x.ai_score, reverse=True)
             for i, job in enumerate(pending_manual[:10], 1):
                 print(f"  {i}. [{job.ai_score:.0f}分] {job.company} - {job.title}")
@@ -959,6 +1008,45 @@ AI 分析
 
 
 # ============================================================
+# 失败日志
+# ============================================================
+def append_resume_failure_log(job: dict, error_message: str):
+    """记录 AI 简历生成失败日志，便于后续定位问题。"""
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log_path = LOG_DIR / "resume_failures.log"
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        lines = [
+            "=" * 80,
+            f"时间: {timestamp}",
+            f"job_id: {job.get('job_id', '')}",
+            f"公司: {job.get('company', 'Unknown')}",
+            f"职位: {job.get('title', 'Unknown')}",
+            f"AI评分: {job.get('ai_score', 0)}",
+            f"链接: {job.get('url', '')}",
+            f"错误: {error_message}",
+            "",
+        ]
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+    except Exception as e:
+        log.warning(f"写入 resume_failures.log 失败: {e}")
+
+
+@dataclass(frozen=True)
+class PipelineArtifacts:
+    """集中定义主要产物文件，便于说明各文件职责。"""
+    job_registry: str = "jobs_progress.json"
+    list_cache: str = "jobs_list_cache.json"
+    quota_retry_queue: str = "quota_skipped_jobs.json"
+    apply_results: str = "apply_results.json"
+    token_usage: str = "token_usage.json"
+    legacy_tracker: str = "application_tracker.json"
+    legacy_applied: str = "applied_jobs.json"
+    resume_failure_log: str = "logs/resume_failures.log"
+
+
+# ============================================================
 # 主流程
 # ============================================================
 class Pipeline:
@@ -969,6 +1057,7 @@ class Pipeline:
         self.config = self.config_mgr.config
         output_dir = self.config.get('output', {}).get('base_dir', './output')
         self.base_dir = Path(output_dir)
+        self.artifacts = PipelineArtifacts()
         self.tracker = ProgressTracker(output_dir)
         self.output_gen = OutputGenerator(output_dir)
         self._last_resume_error_type = None
@@ -978,6 +1067,19 @@ class Pipeline:
         """统一运行产物路径到 output.base_dir。"""
         self.base_dir.mkdir(parents=True, exist_ok=True)
         return self.base_dir / filename
+
+    def _artifact_paths(self) -> Dict[str, Path]:
+        """统一暴露关键文件路径，减少文件名散落在各处。"""
+        return {
+            "job_registry": self._artifact_path(self.artifacts.job_registry),
+            "list_cache": self._artifact_path(self.artifacts.list_cache),
+            "quota_retry_queue": self._artifact_path(self.artifacts.quota_retry_queue),
+            "apply_results": self._artifact_path(self.artifacts.apply_results),
+            "token_usage": self._artifact_path(self.artifacts.token_usage),
+            "legacy_tracker": self._artifact_path(self.artifacts.legacy_tracker),
+            "legacy_applied": self._artifact_path(self.artifacts.legacy_applied),
+            "resume_failure_log": self._artifact_path(self.artifacts.resume_failure_log),
+        }
 
     def _effective_min_ai_score(self) -> int:
         """统一获取最低 AI 分：env 优先，其次配置。"""
@@ -1108,7 +1210,7 @@ class Pipeline:
         import linkedin_scraper
 
         self.config_mgr.sync_to_projects()
-        jobs_file = self._artifact_path("jobs_progress.json")
+        jobs_file = self._artifact_paths()["job_registry"]
         if not jobs_file.exists():
             log.error("未找到 jobs_progress.json，请先 crawl")
             return 0
@@ -1130,7 +1232,7 @@ class Pipeline:
             quota_file = (
                 Path(quota_skipped_file)
                 if quota_skipped_file
-                else self._artifact_path("quota_skipped_jobs.json")
+                else self._artifact_paths()["quota_retry_queue"]
             )
             if not quota_file.exists():
                 log.error(f"未找到 quota_skipped_jobs.json: {quota_file}")
@@ -1227,16 +1329,24 @@ class Pipeline:
     
     def _load_jobs_progress(self) -> List[dict]:
         """加载 jobs_progress.json 并去重"""
-        jobs_file = self._artifact_path("jobs_progress.json")
+        jobs_file = self._artifact_paths()["job_registry"]
         if jobs_file.exists():
             with open(jobs_file, 'r', encoding='utf-8') as f:
                 jobs = json.load(f)
             
-            # 状态优先级：applied > closed > failed > resume_generated > pending
-            status_priority = {'applied': 5, 'closed': 4, 'failed': 3, 'resume_generated': 2, 'pending': 1}
+            normalized_jobs = []
+            status_changed = False
+            for job in jobs:
+                normalized = dict(job)
+                canonical_status = normalize_job_status(job.get('status'))
+                if canonical_status != job.get('status'):
+                    status_changed = True
+                normalized['status'] = canonical_status
+                normalized_jobs.append(normalized)
+            jobs = normalized_jobs
             
             def get_priority(job):
-                return (status_priority.get(job.get('status', ''), 0), job.get('ai_score', 0))
+                return (status_sort_priority(job.get('status')), job.get('ai_score', 0))
             
             # 去重：基于 title+company，保留优先级最高的（状态 > 分数）
             seen = {}
@@ -1250,9 +1360,12 @@ class Pipeline:
             
             unique_jobs = list(seen.values())
             
-            if len(jobs) > len(unique_jobs):
-                log.info(f"jobs_progress 去重: {len(jobs)} -> {len(unique_jobs)} (移除 {len(jobs) - len(unique_jobs)} 个重复)")
-                # 保存去重后的数据
+            if len(jobs) > len(unique_jobs) or status_changed:
+                if len(jobs) > len(unique_jobs):
+                    log.info(f"jobs_progress 去重: {len(jobs)} -> {len(unique_jobs)} (移除 {len(jobs) - len(unique_jobs)} 个重复)")
+                elif status_changed:
+                    log.info("jobs_progress 状态已规范为 canonical 命名")
+                # 保存去重或规范化后的数据
                 with open(jobs_file, 'w', encoding='utf-8') as f:
                     json.dump(unique_jobs, f, ensure_ascii=False, indent=2)
             
@@ -1261,7 +1374,7 @@ class Pipeline:
     
     def _load_list_cache(self) -> List[dict]:
         """加载 jobs_list_cache.json 并去重"""
-        cache_file = self._artifact_path("jobs_list_cache.json")
+        cache_file = self._artifact_paths()["list_cache"]
         if cache_file.exists():
             with open(cache_file, 'r', encoding='utf-8') as f:
                 jobs = json.load(f)
@@ -1395,7 +1508,7 @@ class Pipeline:
             if filtered_jobs:
                 log.info(f"同时保存 {len(filtered_jobs)} 个被AI预过滤的岗位到 jobs_progress.json...")
                 # 加载现有的 jobs_progress.json
-                progress_file = self._artifact_path("jobs_progress.json")
+                progress_file = self._artifact_paths()["job_registry"]
                 existing_jobs = []
                 if progress_file.exists():
                     with open(progress_file, 'r', encoding='utf-8') as f:
@@ -1433,7 +1546,7 @@ class Pipeline:
                 log.info(f"jobs_progress.json 已更新: {len(existing_jobs)} 个岗位")
             
             # 清空列表缓存（已处理）
-            cache_file = self._artifact_path("jobs_list_cache.json")
+            cache_file = self._artifact_paths()["list_cache"]
             if cache_file.exists():
                 # 移除已处理的岗位（包括抓取了详情的和被过滤掉的）
                 processed_ids = set(j.job_id for j in all_jobs)
@@ -1513,7 +1626,10 @@ class Pipeline:
         log.info(f"筛选 ai_score >= {min_score} 且排除黑名单({len(BLACKLIST_COMPANIES)}家): {len(filtered_jobs)}/{len(jobs)} 个岗位")
         
         # 排除已在 jobs_progress.json 中标记为 applied/closed 的岗位
-        filtered_jobs = [j for j in filtered_jobs if j.get('status') not in ['applied', 'closed']]
+        filtered_jobs = [
+            j for j in filtered_jobs
+            if normalize_job_status(j.get('status')) not in [STATUS_APPLIED, STATUS_CLOSED]
+        ]
 
         log.info(f"排除已申请/关闭: {len(filtered_jobs)} 个岗位")
         
@@ -1537,11 +1653,11 @@ class Pipeline:
             new_jobs = filtered_jobs
             log.info(f"强制模式: 处理所有 {len(new_jobs)} 个高分岗位")
         else:
-            # 排除已处理的 (applied/skipped) 以及已生成简历的 (resume_generated)
+            # 排除已处理的终态岗位，以及已生成简历完成的 resume_ready 岗位
             new_jobs = [
                 j for j in filtered_jobs 
                 if not self.tracker.is_already_processed(j.get('job_id'))
-                and j.get('status') != 'resume_generated'
+                and normalize_job_status(j.get('status')) != STATUS_RESUME_READY
             ]
             log.info(f"排除已处理/已生成: {len(new_jobs)} 个待处理")
         
@@ -1609,20 +1725,7 @@ class Pipeline:
             try:
                 resume_pdf_path = self._generate_resume(job, base_resume, base_pdf)
                 if self._last_resume_error_type == "quota_exhausted":
-                    # 配额不足时降级为可追踪的跳过状态，避免重复重试刷日志
-                    self.tracker.update_status(job_id, "skipped")
-                    job['status'] = 'skipped_quota'
-                    job['resume_error'] = self._last_resume_error_message or "Gemini quota exhausted"
-                    quota_skipped_jobs.append({
-                        "job_id": job_id,
-                        "title": title,
-                        "company": company,
-                        "ai_score": job.get('ai_score', 0),
-                        "reason": job['resume_error'],
-                        "skipped_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    })
-                    log.warning("  ✗ 简历定制失败: AI 配额不足，已标记为 skipped_quota（稍后补额度可重跑）")
-                    continue
+                    raise RuntimeError(self._last_resume_error_message or "AI 简历生成失败：配额不足")
 
                 if resume_pdf_path:
                     # 生成输出文件
@@ -1634,19 +1737,22 @@ class Pipeline:
                     else:
                         manual_counter += 1
                     
-                    self.tracker.update_status(job_id, "resume_generated", output_path)
+                    self.tracker.update_status(job_id, STATUS_RESUME_READY, output_path)
                     
                     # 同步 resume_path 到 job 字典（用于 jobs_progress.json）
                     job['resume_path'] = resume_pdf_path
-                    job['status'] = 'resume_generated'
+                    job['status'] = STATUS_RESUME_READY
+                    self._sync_single_resume_path_to_progress(job)
                     
                     processed_jobs.append(job)
                     log.info(f"  ✓ 已生成")
                 else:
-                    log.warning(f"  ✗ 简历生成失败")
+                    raise RuntimeError("AI 简历生成失败：未返回可用简历文件路径")
                     
             except Exception as e:
                 log.error(f"  ✗ 处理失败: {e}")
+                append_resume_failure_log(job, str(e))
+                raise
         
         # 生成汇总
         self.output_gen.generate_summary(processed_jobs)
@@ -1656,7 +1762,7 @@ class Pipeline:
         self._sync_resume_paths_to_progress(processed_jobs)
 
         if quota_skipped_jobs:
-            quota_file = self._artifact_path("quota_skipped_jobs.json")
+            quota_file = self._artifact_paths()["quota_retry_queue"]
             try:
                 existing = []
                 if quota_file.exists():
@@ -1680,7 +1786,7 @@ class Pipeline:
     
     def _sync_resume_paths_to_progress(self, processed_jobs: List[dict]):
         """同步简历路径回 jobs_progress.json"""
-        jobs_file = self._artifact_path("jobs_progress.json")
+        jobs_file = self._artifact_paths()["job_registry"]
         if not jobs_file.exists():
             return
         
@@ -1701,7 +1807,7 @@ class Pipeline:
                 job_id = job.get('job_id')
                 if job_id in resume_map:
                     job['resume_path'] = resume_map[job_id]
-                    job['status'] = 'resume_generated'
+                    job['status'] = STATUS_RESUME_READY
                     updated += 1
             
             if updated > 0:
@@ -1711,12 +1817,44 @@ class Pipeline:
         
         except Exception as e:
             log.warning(f"同步简历路径失败: {e}")
+
+    def _sync_single_resume_path_to_progress(self, job: dict):
+        """单个岗位成功后立即落盘，确保失败中断后也能精确续跑。"""
+        jobs_file = self._artifact_paths()["job_registry"]
+        if not jobs_file.exists():
+            return
+
+        job_id = job.get('job_id')
+        resume_path = job.get('resume_path')
+        if not job_id or not resume_path:
+            return
+
+        try:
+            with open(jobs_file, 'r', encoding='utf-8') as f:
+                all_jobs = json.load(f)
+
+            updated = False
+            for row in all_jobs:
+                if row.get('job_id') == job_id:
+                    row['resume_path'] = resume_path
+                    row['status'] = STATUS_RESUME_READY
+                    updated = True
+                    break
+
+            if updated:
+                with open(jobs_file, 'w', encoding='utf-8') as f:
+                    json.dump(all_jobs, f, ensure_ascii=False, indent=2)
+                log.info(f"✓ 已立即同步岗位 {job_id} 的简历路径到 jobs_progress.json")
+
+        except Exception as e:
+            log.warning(f"单岗位同步简历路径失败: {e}")
     
     def _generate_resume(self, job: dict, base_resume: str, base_pdf: str = None) -> str:
         """生成定制简历
         
-        尝试调用 Word Editor，失败则直接使用基础简历
-        返回生成的 PDF 路径
+        尝试调用 Word Editor 生成定制简历。
+        若 AI 简历生成失败，则立即抛错，由上层停止整个流程。
+        返回生成的 PDF 或 DOCX 路径。
         """
         import re
         self._last_resume_error_type = None
@@ -1807,36 +1945,35 @@ class Pipeline:
                     if word_path and os.path.exists(word_path):
                         log.warning(f"  Word Editor 未返回可用 PDF，回退使用 DOCX: {word_path}")
                         return word_path
+                    err = "Word Editor 成功返回，但既没有可用 PDF，也没有可用 DOCX"
+                    self._last_resume_error_message = err
+                    log.error(f"  {err}")
+                    raise RuntimeError(err)
                 else:
                     err = str(result.get('error', 'Unknown'))
-                    log.warning(f"  Word Editor 返回失败: {err}")
+                    self._last_resume_error_message = err
+                    log.error(f"  Word Editor 返回失败: {err}")
                     is_quota_error = ("RESOURCE_EXHAUSTED" in err or "429" in err)
                     if is_quota_error:
                         self._last_resume_error_type = "quota_exhausted"
                         self._last_resume_error_message = err
+                    raise RuntimeError(f"AI 简历生成失败: {err}")
                     
         except ImportError as e:
-            log.debug(f"Word Editor 导入失败: {e}")
+            err = f"Word Editor 导入失败: {e}"
+            self._last_resume_error_message = err
+            log.error(err)
+            raise RuntimeError(err)
         except Exception as e:
-            log.warning(f"  Word Editor 处理失败: {e}")
             err = str(e)
+            self._last_resume_error_message = err
+            log.error(f"  Word Editor 处理失败: {err}")
             if "RESOURCE_EXHAUSTED" in err or "429" in err:
                 self._last_resume_error_type = "quota_exhausted"
                 self._last_resume_error_message = err
             import traceback
             traceback.print_exc()
-        
-        # 回退：使用基础简历
-        if base_pdf and os.path.exists(base_pdf):
-            log.info(f"  使用基础 PDF 回退: {base_pdf}")
-            return base_pdf
-        elif os.path.exists(base_resume) and base_resume.endswith('.pdf'):
-            log.info(f"  使用基础简历PDF回退: {base_resume}")
-            return base_resume
-
-        log.warning("  无可用简历文件用于回退（既没有定制结果，也没有可用基础PDF）")
-        
-        return ""
+            raise RuntimeError(f"AI 简历生成失败: {err}")
     
     def _save_job_info(self, output_dir: Path, output_name: str, job: dict):
         """保存岗位信息到TXT文件"""
@@ -1917,8 +2054,9 @@ AI Reason: {job.get('ai_reason', '')}
             log.error(f"找不到 apply_from_progress.py: {apply_script}")
             return
         
-        jobs_progress_file = self.base_dir / "jobs_progress.json"
-        results_file = self.base_dir / "apply_results.json"
+        artifact_paths = self._artifact_paths()
+        jobs_progress_file = artifact_paths["job_registry"]
+        results_file = artifact_paths["apply_results"]
         
         log.info(f"\n调用 Auto_job_applier 自动申请...")
         log.info(f"  脚本: {apply_script}")
@@ -1988,15 +2126,15 @@ AI Reason: {job.get('ai_reason', '')}
                 continue
             
             if result.get('success'):
-                self.tracker.update_status(job_id, 'applied')
+                self.tracker.update_status(job_id, STATUS_APPLIED)
             else:
                 # 标记失败，可以后续重试
-                self.tracker.update_status(job_id, 'failed')
+                self.tracker.update_status(job_id, STATUS_FAILED)
     
     def run_status(self):
         """查看状态"""
         self.tracker.print_status()
-        usage_file = self._artifact_path("token_usage.json")
+        usage_file = self._artifact_paths()["token_usage"]
         if usage_file.exists():
             try:
                 with open(usage_file, "r", encoding="utf-8") as f:
@@ -2023,7 +2161,7 @@ AI Reason: {job.get('ai_reason', '')}
             # 标记所有手动申请为完成
             count = 0
             for job in self.tracker.get_pending_jobs(is_easy_apply=False):
-                self.tracker.update_status(job.job_id, "applied")
+                self.tracker.update_status(job.job_id, STATUS_APPLIED)
                 count += 1
             log.info(f"已标记 {count} 个手动申请为完成")
         else:
@@ -2034,7 +2172,7 @@ AI Reason: {job.get('ai_reason', '')}
                 if identifier.isdigit():
                     # 从resume_path提取编号
                     if job.resume_path and f"/{identifier}_" in job.resume_path.replace('\\', '/'):
-                        self.tracker.update_status(job_id, "applied")
+                        self.tracker.update_status(job_id, STATUS_APPLIED)
                         log.info(f"已标记: {job.company} - {job.title}")
                         found = True
                         break
@@ -2042,7 +2180,7 @@ AI Reason: {job.get('ai_reason', '')}
                 elif identifier.lower() in job_id.lower() or \
                      identifier.lower() in job.title.lower() or \
                      identifier.lower() in job.company.lower():
-                    self.tracker.update_status(job_id, "applied")
+                    self.tracker.update_status(job_id, STATUS_APPLIED)
                     log.info(f"已标记: {job.company} - {job.title}")
                     found = True
                     break
@@ -2179,7 +2317,7 @@ def main():
                 print("      python run_pipeline.py done all")
         elif args.command == 'skip':
             if args.arg:
-                pipeline.tracker.update_status(args.arg, "skipped")
+                pipeline.tracker.update_status(args.arg, STATUS_SKIPPED)
                 log.info(f"已跳过: {args.arg}")
             else:
                 print("用法: python run_pipeline.py skip <编号或job_id>")
