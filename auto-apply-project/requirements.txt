@@ -1,1 +1,2 @@
-# No external dependencies required for this scaffold.
+pypdf>=4.0
+openai>=1.0

@@ -45,7 +45,8 @@ def cmd_run_easy(args: argparse.Namespace) -> None:
     if args.max is not None:
         jobs = jobs[: args.max]
 
-    engine = AutoApplyEngine(load_profile(), Path(args.data_dir))
+    use_ai_fill: bool | None = False if getattr(args, "no_ai", False) else None
+    engine = AutoApplyEngine(load_profile(use_ai_fill=use_ai_fill), Path(args.data_dir))
     result = engine.run_easy_apply_only(jobs)
     print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
@@ -60,7 +61,8 @@ def cmd_run_easy_todo(args: argparse.Namespace) -> None:
         jobs = [job for job in jobs if str(job.job_id) not in applied_ids]
     if args.max is not None:
         jobs = jobs[: args.max]
-    engine = AutoApplyEngine(load_profile(), Path(args.data_dir))
+    use_ai_fill: bool | None = False if getattr(args, "no_ai", False) else None
+    engine = AutoApplyEngine(load_profile(use_ai_fill=use_ai_fill), Path(args.data_dir))
     result = engine.run_easy_apply_only(jobs)
     print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
@@ -93,6 +95,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional cap for number of jobs to process",
     )
+    easy_parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="Disable LLM merge; use resume scan + env + todo only",
+    )
     easy_parser.set_defaults(func=cmd_run_easy)
 
     easy_todo_parser = sub.add_parser("run-easy-todo", help="Run Easy Apply by easy_todo.txt")
@@ -118,6 +125,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default=None,
         help="Optional single job_id for targeted apply retry",
+    )
+    easy_todo_parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="Disable LLM merge; use resume scan + env + todo only",
     )
     easy_todo_parser.set_defaults(func=cmd_run_easy_todo)
     return parser

@@ -7,7 +7,7 @@
 
 - `crawl / crawl-detail`：职位抓取与进度落盘
 - `generate`：调用 word_editor 生成定制简历并回写 `resume_path`
-- `apply`：调用 `auto-apply-project` 执行 Easy Apply
+- `apply`：先调用 `auto-apply-project` 生成 `easy_apply_answers/*.json`，再（默认）用 Selenium 打开 `easy_todo` 中岗位并点击 Easy Apply 填表（见 `easy_apply_browser.py`、`advanced.easy_apply_browser`；`--no-browser` 可仅生成 JSON）
 - `status`：输出统一进度统计与费用统计
 
 ## 主入口
@@ -23,6 +23,7 @@
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py crawl
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py generate --limit 5
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py apply --max 5
+./.venv/bin/python pipeline-orchestrator/run_pipeline.py apply --max 5 --no-browser
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py status
 ```
 

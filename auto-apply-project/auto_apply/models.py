@@ -40,6 +40,8 @@ class Job:
     base_country: str = ""
     contact_phone: str = ""
     contact_address: str = ""
+    job_description: str = ""
+    location: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         payload = self.__dict__.copy()

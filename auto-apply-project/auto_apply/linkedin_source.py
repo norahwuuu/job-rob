@@ -32,6 +32,8 @@ def map_progress_item_to_job(item: dict) -> Job:
         score=int(float(item.get("ai_score", 0) or 0)),
         source_status=str(item.get("status", "")),
         resume_path=str(item.get("resume_path", "")),
+        job_description=str(item.get("job_description", "") or ""),
+        location=str(item.get("location", "") or ""),
     )
 
 

@@ -8,7 +8,7 @@ LinkedIn 智能求职助手 - 统一入口
     python run_pipeline.py crawl        # 只爬取岗位
     python run_pipeline.py generate     # 只生成定制简历
     python run_pipeline.py rescore-llm  # 对 jobs_progress 中 LLM 评分失败的记录重新评分
-    python run_pipeline.py apply        # 只自动申请 Easy Apply
+    python run_pipeline.py apply        # Easy Apply：生成填表 JSON + 默认浏览器投递
     python run_pipeline.py status       # 查看进度
     python run_pipeline.py done 001     # 标记手动申请完成
     python run_pipeline.py open         # 打开输出文件夹
@@ -423,8 +423,14 @@ class ConfigManager:
         scraper_config["resume_path"] = resume_cfg.get("base_json", "resume.json")
         output_cfg = config.get("output", {}) or {}
         output_base = output_cfg.get("base_dir", "./output") or "./output"
-        scraper_config["output_passed_csv"] = str(Path(output_base) / "jobs_passed.csv")
-        scraper_config["output_filtered_csv"] = str(Path(output_base) / "jobs_filtered_out.csv")
+        save_csv = bool(output_cfg.get("save_csv", False))
+        scraper_config["save_csv"] = save_csv
+        if save_csv:
+            scraper_config["output_passed_csv"] = str(Path(output_base) / "jobs_passed.csv")
+            scraper_config["output_filtered_csv"] = str(Path(output_base) / "jobs_filtered_out.csv")
+        else:
+            scraper_config["output_passed_csv"] = ""
+            scraper_config["output_filtered_csv"] = ""
         scraper_config["output_json"] = str(Path(output_base) / "jobs_passed.json")
 
         scraper_config["gemini_api_key"] = ""
@@ -478,7 +484,8 @@ class ConfigManager:
                 'exclude_german': True
             },
             'output': {
-                'base_dir': '../artifacts'
+                'base_dir': '../artifacts',
+                'save_csv': False,
             }
         }
 
@@ -569,8 +576,14 @@ class ConfigManager:
             scraper_config['resume_path'] = resume_cfg.get('base_json', 'resume.json')
         output_cfg = self.config.get('output', {}) or {}
         output_base = output_cfg.get('base_dir', './output') or './output'
-        scraper_config['output_passed_csv'] = str(Path(output_base) / 'jobs_passed.csv')
-        scraper_config['output_filtered_csv'] = str(Path(output_base) / 'jobs_filtered_out.csv')
+        save_csv = bool(output_cfg.get('save_csv', False))
+        scraper_config['save_csv'] = save_csv
+        if save_csv:
+            scraper_config['output_passed_csv'] = str(Path(output_base) / 'jobs_passed.csv')
+            scraper_config['output_filtered_csv'] = str(Path(output_base) / 'jobs_filtered_out.csv')
+        else:
+            scraper_config['output_passed_csv'] = ''
+            scraper_config['output_filtered_csv'] = ''
         scraper_config['output_json'] = str(Path(output_base) / 'jobs_passed.json')
 
         ai_cfg = self.config.get('ai', {}) or {}
@@ -2082,17 +2095,64 @@ AI Reason: {job.get('ai_reason', '')}
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write(content)
     
+    def _want_easy_apply_browser(self, no_browser_cli: bool) -> bool:
+        """是否用 Selenium 在 LinkedIn 上完成真实 Easy Apply（与填表 JSON 配套）。"""
+        if no_browser_cli:
+            return False
+        env_raw = os.environ.get("EASY_APPLY_BROWSER", "").strip().lower()
+        if env_raw in ("0", "false", "no", "off"):
+            return False
+        if env_raw in ("1", "true", "yes", "on"):
+            return True
+        return bool((self.config.get("advanced") or {}).get("easy_apply_browser", True))
+
+    def _run_easy_apply_browser_session(self, prepared_rows: List[dict]) -> List[str]:
+        """对已生成 easy_apply_answers 的岗位依次打开页面并投递。返回成功的 job_id。"""
+        if not prepared_rows:
+            return []
+        import linkedin_scraper
+        from easy_apply_browser import run_prepared_jobs
+
+        linkedin_cfg = self.config.get("linkedin") or {}
+        headless = (self.config.get("advanced") or {}).get("headless", False)
+        scraper = linkedin_scraper.LinkedInScraper(
+            username=linkedin_cfg.get("username", ""),
+            password=linkedin_cfg.get("password", ""),
+            headless=headless,
+        )
+        scraper.start_browser()
+        if not scraper.login():
+            log.error("浏览器登录失败，跳过 Easy Apply 自动化")
+            try:
+                scraper.close()
+            except Exception:
+                pass
+            return []
+        try:
+            return run_prepared_jobs(
+                scraper.browser,
+                prepared_rows,
+                self.base_dir,
+                pause_between_jobs_s=float(os.environ.get("EASY_APPLY_JOB_PAUSE", "4") or 4),
+            )
+        finally:
+            try:
+                scraper.close()
+            except Exception:
+                pass
+
     def run_apply(
         self,
         max_jobs: int = 10,
         date_str: Optional[str] = None,
         target_job_id: Optional[str] = None,
         easy_todo_path: Optional[str] = None,
+        no_browser: bool = False,
     ):
         """阶段3: 自动申请 Easy Apply
         
-        调用 auto-apply-project 的 run-easy 流程
-        通过子进程方式运行，避免跨项目依赖问题
+        先调用 auto-apply-project 生成填表 JSON；若开启 easy_apply_browser，
+        再用 Selenium 遍历当日 easy_todo 对应岗位，打开页面并完成 Easy Apply。
         """
         log.info("=" * 60)
         log.info("阶段 3: 自动申请 Easy Apply")
@@ -2215,27 +2275,45 @@ AI Reason: {job.get('ai_reason', '')}
             if process.returncode != 0:
                 raise RuntimeError(process.stderr.strip() or f"子进程退出码 {process.returncode}")
 
-            # auto-apply-project 会直接写 artifacts/auto_applied.json / manual_todo.json / apply_results.json
+            # auto-apply-project 会写 apply_results.json、auto_applied.json、easy_apply_answers/*.json
+            auto_applied: List[dict] = []
             if results_file.exists():
                 try:
                     with open(results_file, "r", encoding="utf-8") as f:
                         payload = json.load(f) or {}
                     auto_applied = payload.get("auto_applied", []) if isinstance(payload, dict) else []
-                    if auto_applied:
-                        self._sync_apply_results([
-                            {"job_id": row.get("job_id"), "success": True}
-                            for row in auto_applied
-                            if row.get("job_id")
-                        ])
-                        self._sync_apply_status_to_progress([
-                            str(row.get("job_id"))
-                            for row in auto_applied
-                            if row.get("job_id")
-                        ])
-                    log.info(f"\n申请完成，共自动处理 {len(auto_applied)} 个岗位")
-                    self.generate_daily_summary()
                 except Exception as e:
                     log.warning(f"读取申请结果失败: {e}")
+
+            want_browser = self._want_easy_apply_browser(no_browser)
+            applied_job_ids: List[str] = []
+
+            if want_browser and auto_applied:
+                log.info(f"浏览器 Easy Apply 已启用，准备投递 {len(auto_applied)} 个岗位")
+                applied_job_ids = self._run_easy_apply_browser_session(auto_applied)
+            elif auto_applied:
+                applied_job_ids = [
+                    str(row.get("job_id"))
+                    for row in auto_applied
+                    if row.get("job_id")
+                ]
+
+            if applied_job_ids:
+                self._sync_apply_results(
+                    [{"job_id": jid, "success": True} for jid in applied_job_ids]
+                )
+                self._sync_apply_status_to_progress(applied_job_ids)
+                log.info(
+                    f"\n申请完成：已标记为已投递 {len(applied_job_ids)} 个"
+                    f"（本轮准备 {len(auto_applied)} 个）"
+                )
+                self.generate_daily_summary()
+            elif auto_applied and want_browser:
+                log.warning(
+                    "浏览器投递未成功任何岗位，jobs_progress 未标为 applied；请检查登录、选择器或岗位是否仍开放 Easy Apply"
+                )
+            elif not auto_applied:
+                log.info("本轮 auto_applied 为空，未更新 jobs_progress")
             
         except Exception as e:
             log.error(f"自动申请失败: {e}")
@@ -2441,8 +2519,9 @@ def main():
   python run_pipeline.py rescore-llm              # 重新评分：ai_reason 为 LLM评分失败 / 未获取到评分
   python run_pipeline.py rescore-llm --limit 30    # 只重评前 30 条失败记录（防 429）
   python run_pipeline.py rescore-llm --quota-skipped # 只重评 quota_skipped_jobs.json 里的失败岗位（更快）
-  python run_pipeline.py apply        # 只自动申请 Easy Apply
+  python run_pipeline.py apply        # 只自动申请 Easy Apply（默认含浏览器投递，见 advanced.easy_apply_browser）
   python run_pipeline.py apply --max 10  # 最多申请10个岗位
+  python run_pipeline.py apply --no-browser  # 仅生成填表 JSON，不打开浏览器
   python run_pipeline.py apply --date 2026-04-16 --max 5  # 指定日期 easy_todo
   python run_pipeline.py apply --job-id 4371167896 --max 1 # 仅投递单个岗位
   python run_pipeline.py apply --easy-todo /abs/path/easy_todo.txt --max 3
@@ -2465,6 +2544,11 @@ def main():
     parser.add_argument('--date', default=None, help='指定 easy_todo 日期目录，例如 2026-04-16（用于 apply）')
     parser.add_argument('--job-id', default=None, dest='job_id', help='仅投递指定 job_id（用于 apply）')
     parser.add_argument('--easy-todo', default=None, dest='easy_todo', help='直接指定 easy_todo.txt 路径（用于 apply）')
+    parser.add_argument(
+        '--no-browser',
+        action='store_true',
+        help='apply 阶段不启动浏览器（仅子进程生成 easy_apply_answers JSON）',
+    )
     parser.add_argument('--force', action='store_true', help='强制重新处理已处理过的岗位')
     parser.add_argument('--min-score', type=int, default=None, dest='min_score', help='最低 AI 分，覆盖 pipeline_config 中 filter.min_ai_score（仅 generate）')
     
@@ -2494,6 +2578,7 @@ def main():
                 date_str=args.date,
                 target_job_id=args.job_id,
                 easy_todo_path=args.easy_todo,
+                no_browser=bool(getattr(args, "no_browser", False)),
             )
         elif args.command == 'status':
             pipeline.run_status()

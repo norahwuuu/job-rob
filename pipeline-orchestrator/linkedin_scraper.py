@@ -230,6 +230,8 @@ class LinkedInScraper:
         self.wait = None
         self.jobs: List[JobListing] = []
         self.deduplicator = JobDeduplicator()  # 初始化去重器
+        # 是否写出 jobs_filtered_out.csv 等岗位 CSV；由 main() 根据 scraper_config.save_csv 设置
+        self.write_job_csv: bool = False
     
     def save_cookies(self) -> None:
         """保存cookies到文件"""
@@ -1147,6 +1149,8 @@ class LinkedInScraper:
     
     def _save_filtered_jobs(self, jobs: List[dict]):
         """保存被预过滤的岗位，以便记录原因"""
+        if not getattr(self, "write_job_csv", False):
+            return
         try:
             progress_file = _out_file("jobs_filtered_out.csv")
             file_exists = os.path.exists(progress_file)
@@ -2490,6 +2494,12 @@ class AIScorer:
 ## 评估简历和岗位要求
 阅读简历然后并评估呃这个人他能做什么就是通过这个简历呀契不契合这个工作然后有多契合这个工作他好来去投递，为每个岗位打分(0-100分)，并给出简短理由。
 
+## 理由书写要求（必须遵守）
+- `reason` 不能空，且要可执行、可解释。
+- 当 `score < 60` 时，`reason` 必须明确写出低分原因（例如：语言硬性门槛、核心技术栈缺口、经验年限不符、岗位类型不符）。
+- 若有多个扣分点，至少写出前 1-2 个最关键扣分点，不要只写笼统句子。
+- 若 `missing_skills` 非空，`reason` 中应体现关键缺失能力。
+
 ## 首选加分（重要）
 在按「德语要求评分规则」算出**基础匹配分**后，若岗位同时满足：**(1) 全职或长期雇佣**（Full-time / Permanent / unlimited contract 等，非纯 Freelance/日结零工）**(2) JD 明确写出签证/工签赞助或 relocation 支持**（如 visa sponsorship, work permit, Blue Card, relocation assistance），可在基础分上**额外 +3～8 分**（总分不超过 100），并在 `reason` 开头注明「首选：全职+签证」。  
 灵活用工（Freelance/Contract/短期）不因此扣分，但通常**不加**此项首选加分。  
@@ -3202,7 +3212,10 @@ class AIScorer:
                             log.info(f"[已保留] ✅ {job['title']} @ {job.get('company', '')} | {job['pre_filter_reason']}")
                         else:
                             batch_filtered += 1
-                            reason = result.get('reason', '不符合AI或全职要求')
+                            reason = (result.get('reason') or '不符合初筛规则').strip()
+                            # keep:false 时 reason 必须写清「为何不继续」；模型偶发会写成匹配说明，统一加前缀便于识别
+                            if not reason.startswith("未通过初筛"):
+                                reason = f"未通过初筛：{reason}"
                             job['pre_filter_passed'] = False
                             job['pre_filter_reason'] = reason
                             batch_filtered_jobs.append(job)
@@ -3261,12 +3274,23 @@ class AIScorer:
             for job in jobs:
                 result = result_map.get(job.job_id)
                 if result:
-                    job.ai_score = float(result.get('score', 50))
+                    score = float(result.get('score', 50))
+                    job.ai_score = score
                     
                     # 构建评分原因
-                    reason = result.get('reason', '')
+                    reason = str(result.get('reason', '') or '').strip()
                     matched = result.get('matched_skills', [])
                     missing = result.get('missing_skills', [])
+
+                    # 兜底：避免出现低分但没有明确原因
+                    if not reason:
+                        if score < 60:
+                            if missing:
+                                reason = f"低分原因：关键能力缺口（{', '.join(missing[:2])}）"
+                            else:
+                                reason = "低分原因：与岗位核心要求匹配度不足"
+                        else:
+                            reason = "模型未返回具体原因"
                     
                     reason_parts = [reason] if reason else []
                     if matched:
@@ -3350,6 +3374,9 @@ class AIScorer:
 
 def save_jobs_to_csv(jobs: List[JobListing], filename: str = "scraped_jobs.csv") -> None:
     """保存岗位到CSV文件"""
+    if not (filename or "").strip():
+        log.info("未配置 CSV 路径，跳过写出")
+        return
     if not jobs:
         log.warning("没有岗位可保存")
         return
@@ -3378,6 +3405,73 @@ def save_jobs_to_json(jobs: List[JobListing], filename: str = "scraped_jobs.json
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump([asdict(job) for job in jobs], f, ensure_ascii=False, indent=2)
     log.info(f"已保存 {len(jobs)} 个岗位到 {filename}")
+
+
+def merge_jobs_progress_after_filter_and_score(
+    passed_scored: List[JobListing],
+    filtered_out: List[JobListing],
+    progress_path: str = None,
+) -> None:
+    """将「关键词/德语/年限过滤 + LLM 评分」后的结果合并回 jobs_progress.json。
+
+    爬取过程中 _save_progress 写入的岗位默认 passed_filter=False，但 ai_reason 可能已是
+    [AI初筛] 匹配说明，会与真实过滤状态错位。本函数按 job_id 覆盖本次运行涉及的记录，
+    并保留已存在条目的 status、resume_path 等终态字段。
+    """
+    path = progress_path or _out_file("jobs_progress.json")
+    existing: List[dict] = []
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if isinstance(raw, list):
+                existing = raw
+        except Exception as e:
+            log.warning(f"读取 jobs_progress 合并前失败，将重建: {e}")
+            existing = []
+
+    preserve_status = {
+        "applied",
+        "closed",
+        "failed",
+        "skipped",
+        "resume_ready",
+        "resume_generated",  # 历史别名
+    }
+    by_id: Dict[str, dict] = {}
+    for row in existing:
+        jid = str(row.get("job_id") or "")
+        if jid:
+            by_id[jid] = dict(row)
+
+    def upsert(job: JobListing, row: dict) -> None:
+        jid = str(job.job_id or "")
+        if not jid:
+            return
+        old = by_id.get(jid, {})
+        merged = {**old, **row}
+        st = (old.get("status") or "").strip().lower()
+        if st in preserve_status:
+            merged["status"] = old.get("status")
+        if old.get("resume_path") and not row.get("resume_path"):
+            merged["resume_path"] = old.get("resume_path")
+        by_id[jid] = merged
+
+    for job in passed_scored:
+        upsert(job, asdict(job))
+    for job in filtered_out:
+        upsert(job, asdict(job))
+
+    # 稳定顺序：高分在前，便于人工浏览
+    out = sorted(by_id.values(), key=lambda r: float(r.get("ai_score", 0) or 0), reverse=True)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+        log.info(
+            f"已合并过滤/评分结果到 jobs_progress.json: 更新 {len(passed_scored) + len(filtered_out)} 条相关岗位"
+        )
+    except Exception as e:
+        log.error(f"合并写入 jobs_progress.json 失败: {e}")
 
 
 def main():
@@ -3429,8 +3523,13 @@ def main():
     effective_model = openai_model
     
     # 输出文件配置
-    output_passed_csv = config.get('output_passed_csv', _out_file('jobs_passed.csv'))
-    output_filtered_csv = config.get('output_filtered_csv', _out_file('jobs_filtered_out.csv'))
+    save_csv = bool(config.get('save_csv', False))
+    output_passed_csv = (config.get('output_passed_csv') or '').strip() or (
+        str(_out_file('jobs_passed.csv')) if save_csv else ''
+    )
+    output_filtered_csv = (config.get('output_filtered_csv') or '').strip() or (
+        str(_out_file('jobs_filtered_out.csv')) if save_csv else ''
+    )
     output_json = config.get('output_json', _out_file('jobs_passed.json'))
     
     # 新增的URL参数
@@ -3471,10 +3570,12 @@ def main():
     log.info(f"OpenAI API Key: {'已设置' if openai_api_key else '未设置'}")
     log.info(f"起始页: {start_page + 1} (auto_resume={auto_resume})")
     log.info(f"只爬列表: {'是' if list_only else '否'}")
+    log.info(f"写出岗位 CSV: {'是' if save_csv else '否'} (save_csv)")
     log.info("=" * 50)
     
     # 创建爬取器
     scraper = LinkedInScraper(username, password, headless=headless)
+    scraper.write_job_csv = save_csv
     
     # 如果配置了自定义预过滤关键词，更新类属性
     if exclude_title_keywords:
@@ -3588,10 +3689,22 @@ def main():
         log.info(f"  - Easy Apply: {len(easy_apply_jobs)}")
         log.info(f"  - 手动投递: {len(manual_apply_jobs)}")
         
-        # 保存结果
-        save_jobs_to_csv(scored_jobs, output_passed_csv)
-        save_jobs_to_csv(filtered_jobs, output_filtered_csv)
+        # 保存结果（CSV 由 output.save_csv / scraper_config.save_csv 控制）
+        if save_csv:
+            if output_passed_csv:
+                save_jobs_to_csv(scored_jobs, output_passed_csv)
+            if output_filtered_csv:
+                save_jobs_to_csv(filtered_jobs, output_filtered_csv)
+        else:
+            log.info("已按配置 save_csv=false，跳过 jobs_passed.csv / jobs_filtered_out.csv")
         save_jobs_to_json(scored_jobs, output_json)
+
+        # 与增量爬取写入的 jobs_progress 对齐：修正 passed_filter / ai_reason 与过滤、评分一致
+        merge_jobs_progress_after_filter_and_score(
+            passed_scored=scored_jobs,
+            filtered_out=filtered_jobs,
+            progress_path=str(_out_file("jobs_progress.json")),
+        )
         
         # 打印推荐岗位
         print("\n" + "=" * 60)
@@ -3610,10 +3723,12 @@ def main():
                 print(f"   💡 {job.ai_reason}")
         
         print("\n" + "=" * 60)
-        print(f"结果已保存到:")
-        print(f"  - 通过的岗位: {output_passed_csv}")
-        print(f"  - 被过滤岗位: {output_filtered_csv}")
-        print(f"  - JSON格式: {output_json}")
+        print("结果已保存到:")
+        if save_csv and output_passed_csv:
+            print(f"  - 通过的岗位(CSV): {output_passed_csv}")
+        if save_csv and output_filtered_csv:
+            print(f"  - 被过滤岗位(CSV): {output_filtered_csv}")
+        print(f"  - JSON: {output_json}")
         print("=" * 60)
         
     except KeyboardInterrupt:

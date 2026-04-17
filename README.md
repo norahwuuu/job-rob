@@ -15,7 +15,7 @@
   负责把岗位 JD + 基础简历转为定制简历（docx/pdf）。
 
 - `auto-apply-project`  
-  负责根据 `easy_todo.txt` 或 `jobs_progress.json` 执行 Easy Apply 自动投递。
+  负责根据 `easy_todo.txt` 解析岗位并生成 `artifacts/easy_apply_answers/*.json`；真实点击投递由 `pipeline-orchestrator` 内 Selenium 完成（`apply` 命令）。
 
 ## 全流程（推荐）
 
@@ -31,8 +31,9 @@
 # 3) 生成简历（小批量）
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py generate --limit 5
 
-# 4) 自动投递（小批量）
+# 4) 自动投递（小批量；默认会启动浏览器完成 LinkedIn Easy Apply，需已登录）
 ./.venv/bin/python pipeline-orchestrator/run_pipeline.py apply --max 5
+# 仅生成填表 JSON、不打开浏览器：加 --no-browser
 ```
 
 ## 常用投递方式

@@ -72,7 +72,11 @@ filter:
 output:
   base_dir: ./artifacts
   by_date: true
+  # 是否写出 jobs_passed.csv / jobs_filtered_out.csv（false 时不生成任何岗位 CSV）
+  save_csv: false
 advanced:
   headless: false
+  # apply 阶段是否在生成填表 JSON 后用浏览器打开 LinkedIn 并完成 Easy Apply（需已登录 / 有效 cookies）
+  easy_apply_browser: true
   batch_size: 1
   llm_delay: 0.2

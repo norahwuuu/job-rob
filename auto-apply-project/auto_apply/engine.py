@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .config import CandidateProfile
+from .easy_apply_fill import build_easy_apply_answers
 from .models import EasyApplyResult, Event, Job, JobState, utc_now_iso
 from .store import JsonStore
 
@@ -26,6 +27,7 @@ class AutoApplyEngine:
         self.profile = profile
         self.store = JsonStore(data_dir)
         self.events: list[Event] = []
+        self._form_bundle_by_job_id: dict[str, dict] = {}
 
     def run(self, jobs: Iterable[Job]) -> RunSummary:
         summary = RunSummary()
@@ -152,20 +154,45 @@ class AutoApplyEngine:
     def simulate_fill_form(self, job: Job) -> None:
         if not job.easy_apply:
             raise ValueError("External apply flow requires manual action")
+        if (job.resume_path or "").strip():
+            answers, notes = build_easy_apply_answers(
+                job,
+                data_dir=self.store.root,
+                use_ai=self.profile.use_ai_resume_fill,
+                ai_model=self.profile.ai_model,
+            )
+            out_dir = self.store.root / "easy_apply_answers"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / f"{job.job_id}.json"
+            payload = {"answers": answers, "notes": notes}
+            self.store.save_json(out_path, payload)
+            self._form_bundle_by_job_id[job.job_id] = payload
+
+            phone = str(answers.get("phone") or job.contact_phone or "")
+            address = str(answers.get("full_address_line") or job.contact_address or "")
+            base_country = str(answers.get("country") or job.base_country or "")
+            note_tail = "; ".join(notes) if notes else "heuristic_only"
+            self.transition(
+                job,
+                JobState.REVIEW,
+                f"Form fields prepared ({note_tail}); phone={phone!r} address={address!r} country={base_country!r}",
+            )
+            return
+
         phone = job.contact_phone or "+49 176 6087 6657"
         address = job.contact_address or "alfredstr. 56, essen,germany"
         base_country = job.base_country or "germany"
         self.transition(
             job,
             JobState.REVIEW,
-            f"Form completed with base={base_country}, phone={phone}, address={address}",
+            f"Form completed (no resume_path) with base={base_country}, phone={phone}, address={address}",
         )
 
     def simulate_submit(self, job: Job) -> None:
         self.transition(job, JobState.SUBMITTED, "Application submitted")
 
     def _result_entry(self, job: Job) -> dict:
-        return {
+        entry = {
             "job_id": job.job_id,
             "title": job.title,
             "company": job.company,
@@ -178,3 +205,11 @@ class AutoApplyEngine:
             "contact_phone": job.contact_phone,
             "contact_address": job.contact_address,
         }
+        bundle = self._form_bundle_by_job_id.get(job.job_id)
+        if bundle:
+            entry["easy_apply_answers"] = bundle.get("answers")
+            entry["easy_apply_fill_notes"] = bundle.get("notes")
+            entry["easy_apply_answers_file"] = str(
+                self.store.root / "easy_apply_answers" / f"{job.job_id}.json"
+            )
+        return entry
