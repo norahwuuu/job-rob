@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Normalize legacy artifact filenames under out/ date folders.
+Normalize legacy artifact filenames under artifacts/ date folders.
 
 Actions:
 - _JobList.txt -> job_list.txt
@@ -41,15 +41,15 @@ def copy_if_needed(src: Path, dst: Path, apply_changes: bool) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Normalize artifact filenames in out folders")
-    parser.add_argument("--out-dir", default="../out", help="Out directory path relative to LinkedIn-Collect-main")
+    parser = argparse.ArgumentParser(description="Normalize artifact filenames in artifacts folders")
+    parser.add_argument("--out-dir", default="../artifacts", help="Artifacts directory path relative to pipeline-orchestrator")
     parser.add_argument("--apply", action="store_true", help="Apply changes (default is dry-run)")
     args = parser.parse_args()
 
     base = Path(__file__).resolve().parents[1]
     out_dir = (base / args.out_dir).resolve()
     if not out_dir.exists():
-        print(f"out dir not found: {out_dir}")
+        print(f"artifacts dir not found: {out_dir}")
         return
 
     for day_dir in iter_date_dirs(out_dir):

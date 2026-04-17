@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LinkedIn 智能求职助手 - 统一入口
-整合三个项目：LinkedIn-Collect, Word Editor, Auto_job_applier_linkedIn
+整合三个项目：LinkedIn-Collect, word_editor, auto-apply-project
 
 使用方法:
     python run_pipeline.py              # 完整流程
@@ -43,8 +43,8 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 log.addHandler(console_handler)
 
-# 文件输出（统一放到 LinkedIn-Collect-main/out/logs，避免受运行目录影响）
-LOG_DIR = Path(__file__).parent / "out" / "logs"
+# 文件输出（统一放到根目录 artifacts/logs，避免受运行目录影响）
+LOG_DIR = Path(__file__).parent.parent / "artifacts" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 file_handler = logging.FileHandler(str(LOG_DIR / f'pipeline_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'), encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
@@ -210,16 +210,19 @@ class ConfigManager:
     """统一配置管理器 - 同步更新三个项目的配置"""
     
     def __init__(self, config_path: str = "pipeline_config.yaml"):
-        self.config_path = Path(config_path)
         self.base_dir = Path(__file__).parent
+        config_candidate = Path(config_path)
+        if not config_candidate.is_absolute():
+            config_candidate = (self.base_dir / config_candidate).resolve()
+        self.config_path = config_candidate
         
         # 项目路径
         self.LINKEDIN_COLLECT_PATH = self.base_dir
-        # 指向 Word Editor 根目录（兼容目录名可能带 "-main"）
+        # 指向 word_editor 根目录（兼容目录名可能带 "-main"）
         parent_dir = self.base_dir.parent
         candidate_word_editor_paths = [
-            parent_dir / "resume_AI_editor" / "Word Editor",
-            parent_dir / "resume_AI_editor-main" / "Word Editor",
+            parent_dir / "resume_AI_editor" / "word_editor",
+            parent_dir / "resume-customizer" / "word_editor",
         ]
         self.WORD_EDITOR_PATH = next(
             (p for p in candidate_word_editor_paths if p.exists()),
@@ -263,8 +266,11 @@ class ConfigManager:
         return data
 
     def _load_local_env_file(self):
-        """加载本地环境变量文件（仅 .env）。"""
-        env_files = [self.base_dir / ".env"]
+        """加载本地环境变量文件（优先仓库根目录 .env）。"""
+        env_files = [
+            self.base_dir.parent / ".env",
+            self.base_dir / ".env",
+        ]
 
         for env_path in env_files:
             if not env_path.exists():
@@ -436,39 +442,6 @@ class ConfigManager:
         with open(scraper_config_path, "w", encoding="utf-8") as f:
             yaml.dump(scraper_config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
-    def _sync_legacy_config_yaml_from_effective(self, config: dict):
-        """按最终生效配置写入 config.yaml（兼容旧脚本）。"""
-        legacy_path = self.LINKEDIN_COLLECT_PATH / "config.yaml"
-        legacy_cfg = {}
-        if legacy_path.exists():
-            with open(legacy_path, "r", encoding="utf-8") as f:
-                legacy_cfg = yaml.safe_load(f) or {}
-
-        linkedin_cfg = config.get("linkedin", {}) or {}
-        search_cfg = config.get("search", {}) or {}
-        advanced_cfg = config.get("advanced", {}) or {}
-        ai_cfg = config.get("ai", {}) or {}
-
-        legacy_cfg["username"] = linkedin_cfg.get("username", "")
-        legacy_cfg["password"] = linkedin_cfg.get("password", "")
-        legacy_cfg["phone_number"] = linkedin_cfg.get("phone_number", "")
-        legacy_cfg["positions"] = search_cfg.get("positions") or []
-        legacy_cfg["locations"] = search_cfg.get("locations") or []
-        legacy_cfg["geo_id"] = search_cfg.get("geo_id") or None
-        legacy_cfg["time_filter"] = search_cfg.get("time_filter", "")
-        legacy_cfg["sort_by"] = search_cfg.get("sort_by", "DD")
-        legacy_cfg["max_pages"] = search_cfg.get("max_pages", 1)
-        legacy_cfg["experience_level"] = search_cfg.get("experience_level") or []
-        legacy_cfg["headless"] = bool(advanced_cfg.get("headless", False))
-        legacy_cfg["batch_size"] = advanced_cfg.get("batch_size", 25)
-        legacy_cfg["llm_delay"] = advanced_cfg.get("llm_delay", 1.0)
-        legacy_cfg["gemini_api_key"] = ""
-        legacy_cfg["gemini_model"] = ai_cfg.get("openai_model", "gemini-2.5-flash")
-        legacy_cfg["use_llm_scoring"] = bool(ai_cfg.get("use_llm_scoring", True))
-
-        with open(legacy_path, "w", encoding="utf-8") as f:
-            yaml.dump(legacy_cfg, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    
     def _default_config(self) -> dict:
         """默认配置"""
         return {
@@ -505,7 +478,7 @@ class ConfigManager:
                 'exclude_german': True
             },
             'output': {
-                'base_dir': '../out'
+                'base_dir': '../artifacts'
             }
         }
 
@@ -528,7 +501,7 @@ class ConfigManager:
         # 1. 同步到 LinkedIn-Collect
         self._sync_linkedin_collect()
         
-        # 2. 同步到 Word Editor
+        # 2. 同步到 word_editor
         self._sync_word_editor()
         
         # 3. 同步到 Auto_job_applier
@@ -619,17 +592,18 @@ class ConfigManager:
         log.debug(f"已更新: {scraper_config_path}")
     
     def _sync_word_editor(self):
-        """同步到 Word Editor 的 .env"""
+        """同步到 word_editor 的 .env"""
         if not self.WORD_EDITOR_PATH.exists():
-            log.warning(f"Word Editor 项目不存在: {self.WORD_EDITOR_PATH}")
+            log.warning(f"word_editor 项目不存在: {self.WORD_EDITOR_PATH}")
             return
         
-        # 更新 .env 文件 (位于 Word Editor 根目录)
+        # 更新 .env 文件 (位于 word_editor 根目录)
         # 注意: self.WORD_EDITOR_PATH 已修正为指向项目根目录
         env_path = self.WORD_EDITOR_PATH / ".env"
         env_content = f"""# Auto-synced from pipeline_config.yaml
+# OPENAI_API_KEY is resolved from process environment at runtime.
 AI_PROVIDER=gemini_relay
-OPENAI_API_KEY={self.config.get('ai', {}).get('openai_api_key', '')}
+OPENAI_API_KEY=${{OPENAI_API_KEY}}
 OPENAI_MODEL={self.config.get('ai', {}).get('openai_model', 'gemini-2.5-flash')}
 OPENAI_BASE_URL={normalize_openai_base_url(self.config.get('ai', {}).get('openai_base_url') or self.config.get('ai', {}).get('server_url', ''))}
 AI_SERVER_URL={normalize_openai_base_url(self.config.get('ai', {}).get('server_url') or self.config.get('ai', {}).get('openai_base_url', ''))}
@@ -960,9 +934,6 @@ AI 分析
 """
             with open(pending_list_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            # Legacy compatibility
-            with open(self.manual_dir / "_待申请列表.txt", 'w', encoding='utf-8') as f:
-                f.write(content)
         
         # Easy Apply 列表
         if easy_apply_jobs:
@@ -985,9 +956,6 @@ AI 分析
                     content += f"    🌐 官网申请: {ext_url}\n"
             
             with open(easy_list_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            # Legacy compatibility
-            with open(self.easy_apply_dir / "_EasyApply列表.txt", 'w', encoding='utf-8') as f:
                 f.write(content)
 
     def generate_joblist(self, jobs: List[dict], interrupted: bool = False) -> List[Path]:
@@ -1012,10 +980,15 @@ AI 分析
             def _normalize_resume_path(resume_path: str) -> str:
                 if not resume_path:
                     return ""
-                # 历史兼容：将旧路径 LinkedIn-Collect-main/out/... 归一到根目录 out/...
-                legacy_token = "/LinkedIn-Collect-main/out/"
-                if legacy_token in resume_path:
-                    _, tail = resume_path.split(legacy_token, 1)
+                # 历史兼容：将旧路径 pipeline-orchestrator/out/... 或 .../artifacts/... 归一到根目录 artifacts/...
+                legacy_tokens = ["/pipeline-orchestrator/out/", "/pipeline-orchestrator/artifacts/"]
+                matched_tail = None
+                for token in legacy_tokens:
+                    if token in resume_path:
+                        matched_tail = resume_path.split(token, 1)[1]
+                        break
+                if matched_tail is not None:
+                    tail = matched_tail
                     normalized = str((self.output_dir / tail).resolve())
                     if Path(normalized).exists():
                         return normalized
@@ -1049,24 +1022,19 @@ AI 分析
         easy_path = self.today_dir / self.easy_todo_name
         manual_path = self.today_dir / self.manual_todo_name
         list_path = self.today_dir / self.job_list_name
-        legacy_path = self.today_dir / "_JobList.txt"
 
         with open(easy_path, 'w', encoding='utf-8') as f:
             f.write(_build_content("Easy Apply Todo", easy_jobs))
         with open(manual_path, 'w', encoding='utf-8') as f:
             f.write(_build_content("Manual Apply Todo", manual_jobs))
 
-        # 兼容旧入口，保留一个合并版 JobList。
         with open(list_path, 'w', encoding='utf-8') as f:
-            f.write(_build_content("Job List", jobs))
-        with open(legacy_path, 'w', encoding='utf-8') as f:
             f.write(_build_content("Job List", jobs))
 
         log.info(f"已生成待办清单: {easy_path}")
         log.info(f"已生成待办清单: {manual_path}")
         log.info(f"已生成汇总清单: {list_path}")
-        log.info(f"已生成兼容清单: {legacy_path}")
-        return [easy_path, manual_path, list_path, legacy_path]
+        return [easy_path, manual_path, list_path]
 
 
 # ============================================================
@@ -1103,8 +1071,6 @@ class PipelineArtifacts:
     quota_retry_queue: str = "quota_skipped_jobs.json"
     apply_results: str = "apply_results.json"
     token_usage: str = "token_usage.json"
-    legacy_tracker: str = "application_tracker.json"
-    legacy_applied: str = "applied_jobs.json"
     resume_failure_log: str = "logs/resume_failures.log"
 
 
@@ -1117,8 +1083,8 @@ class Pipeline:
     def __init__(self, config_path: str = "pipeline_config.yaml"):
         self.config_mgr = ConfigManager(config_path)
         self.config = self.config_mgr.config
-        # 统一输出目录到工作区根目录: job-bot/out
-        output_dir_path = (self.config_mgr.base_dir.parent / "out").resolve()
+        # 统一输出目录到工作区根目录: job-bot/artifacts
+        output_dir_path = (self.config_mgr.base_dir.parent / "artifacts").resolve()
         output_dir = str(output_dir_path)
         self.config.setdefault("output", {})["base_dir"] = output_dir
         self.base_dir = output_dir_path
@@ -1141,8 +1107,6 @@ class Pipeline:
             "quota_retry_queue": self._artifact_path(self.artifacts.quota_retry_queue),
             "apply_results": self._artifact_path(self.artifacts.apply_results),
             "token_usage": self._artifact_path(self.artifacts.token_usage),
-            "legacy_tracker": self._artifact_path(self.artifacts.legacy_tracker),
-            "legacy_applied": self._artifact_path(self.artifacts.legacy_applied),
             "resume_failure_log": self._artifact_path(self.artifacts.resume_failure_log),
         }
 
@@ -1776,7 +1740,7 @@ class Pipeline:
         base_pdf = base_resume.replace('.docx', '.pdf')
         log.info(f"基础简历PDF候选路径: {base_pdf}")
         if not os.path.exists(base_resume):
-            log.warning(f"未找到基础简历文件: {base_resume}（将依赖 Word Editor 生成或后续回退）")
+            log.warning(f"未找到基础简历文件: {base_resume}（将依赖 word_editor 生成或后续回退）")
         if not os.path.exists(base_pdf) and os.path.exists(base_resume):
             log.info("转换基础简历为 PDF...")
             try:
@@ -1978,11 +1942,10 @@ class Pipeline:
     def _generate_resume(self, job: dict, base_resume: str, base_pdf: str = None) -> str:
         """生成定制简历
         
-        尝试调用 Word Editor 生成定制简历。
+        尝试调用 word_editor 生成定制简历。
         若 AI 简历生成失败，则立即抛错，由上层停止整个流程。
         返回生成的 PDF 或 DOCX 路径。
         """
-        import re
         self._last_resume_error_type = None
         self._last_resume_error_message = ""
         
@@ -1992,7 +1955,7 @@ class Pipeline:
             name = name.replace(' ', '_')
             return name[:50]
         
-        # 尝试调用 Word Editor
+        # 尝试调用 word_editor
         try:
             word_editor_path = self.config_mgr.WORD_EDITOR_PATH
             if word_editor_path.exists():
@@ -2026,14 +1989,14 @@ class Pipeline:
                 resume_output_dir = self.output_gen.today_dir / "resumes"
                 resume_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                # 调用 Word Editor 生成定制简历（仅使用中转 OpenAI）
+                # 调用 word_editor 生成定制简历（仅使用中转 OpenAI）
                 def _call_word_editor(call_provider: str, call_api_key: str):
                     os.environ["AI_PROVIDER"] = call_provider
                     call_model = openai_model
                     resolved_base_url = openai_base_url
                     key_status = "set" if call_api_key else "missing"
                     log.info(
-                        f"Word Editor AI请求参数: provider={call_provider}, "
+                        f"word_editor AI请求参数: provider={call_provider}, "
                         f"model={call_model or '(empty)'}, "
                         f"base_url={resolved_base_url or '(default)'}, "
                         f"api_key={key_status}"
@@ -2069,16 +2032,16 @@ class Pipeline:
                     # 如果没有 PDF，返回 Word 路径
                     word_path = result.get('word_path')
                     if word_path and os.path.exists(word_path):
-                        log.warning(f"  Word Editor 未返回可用 PDF，回退使用 DOCX: {word_path}")
+                        log.warning(f"  word_editor 未返回可用 PDF，回退使用 DOCX: {word_path}")
                         return word_path
-                    err = "Word Editor 成功返回，但既没有可用 PDF，也没有可用 DOCX"
+                    err = "word_editor 成功返回，但既没有可用 PDF，也没有可用 DOCX"
                     self._last_resume_error_message = err
                     log.error(f"  {err}")
                     raise RuntimeError(err)
                 else:
                     err = str(result.get('error', 'Unknown'))
                     self._last_resume_error_message = err
-                    log.error(f"  Word Editor 返回失败: {err}")
+                    log.error(f"  word_editor 返回失败: {err}")
                     is_quota_error = ("RESOURCE_EXHAUSTED" in err or "429" in err)
                     if is_quota_error:
                         self._last_resume_error_type = "quota_exhausted"
@@ -2086,14 +2049,14 @@ class Pipeline:
                     raise RuntimeError(f"AI 简历生成失败: {err}")
                     
         except ImportError as e:
-            err = f"Word Editor 导入失败: {e}"
+            err = f"word_editor 导入失败: {e}"
             self._last_resume_error_message = err
             log.error(err)
             raise RuntimeError(err)
         except Exception as e:
             err = str(e)
             self._last_resume_error_message = err
-            log.error(f"  Word Editor 处理失败: {err}")
+            log.error(f"  word_editor 处理失败: {err}")
             if "RESOURCE_EXHAUSTED" in err or "429" in err:
                 self._last_resume_error_type = "quota_exhausted"
                 self._last_resume_error_message = err
@@ -2252,7 +2215,7 @@ AI Reason: {job.get('ai_reason', '')}
             if process.returncode != 0:
                 raise RuntimeError(process.stderr.strip() or f"子进程退出码 {process.returncode}")
 
-            # auto-apply-project 会直接写 out/auto_applied.json / manual_todo.json / apply_results.json
+            # auto-apply-project 会直接写 artifacts/auto_applied.json / manual_todo.json / apply_results.json
             if results_file.exists():
                 try:
                     with open(results_file, "r", encoding="utf-8") as f:
@@ -2472,7 +2435,7 @@ def main():
   python run_pipeline.py crawl-detail # AI筛选 + 只抓取高分岗位详情
   python run_pipeline.py crawl-detail --limit 20  # 限制只处理20个
   
-  python run_pipeline.py generate     # 生成定制简历 (使用 Word Editor)
+  python run_pipeline.py generate     # 生成定制简历 (使用 word_editor)
   python run_pipeline.py generate --limit 5   # 只处理前5个高分岗位
   python run_pipeline.py generate --min-score 50   # 覆盖配置的最低分（如评分均为占位值时）
   python run_pipeline.py rescore-llm              # 重新评分：ai_reason 为 LLM评分失败 / 未获取到评分
@@ -2494,7 +2457,7 @@ def main():
                        choices=['full', 'crawl', 'crawl-detail', 'generate', 'rescore-llm', 'apply', 'status', 'done', 'open', 'skip'],
                        help='执行的命令')
     parser.add_argument('arg', nargs='?', help='命令参数')
-    parser.add_argument('--config', default='pipeline_config.yaml', help='配置文件路径')
+    parser.add_argument('--config', default=str(Path(__file__).parent / 'pipeline_config.yaml'), help='配置文件路径')
     parser.add_argument('--limit', type=int, default=None, help='限制数量 (generate / crawl-detail / rescore-llm)')
     parser.add_argument('--quota-skipped', action='store_true', help='仅重评 quota_skipped_jobs.json 中的岗位（并结合 ai_reason 失败标记）')
     parser.add_argument('--quota-skipped-file', default=None, help='quota_skipped_jobs.json 路径（仅用于 --quota-skipped）')

@@ -16,6 +16,9 @@ import logging
 import os
 import random
 import re
+import shutil
+import subprocess
+import sys
 import time
 from datetime import datetime
 from urllib.parse import quote_plus
@@ -54,7 +57,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 def _out_dir() -> Path:
-    path = Path(os.environ.get("PIPELINE__OUTPUT__BASE_DIR", "./out"))
+    path = Path(os.environ.get("PIPELINE__OUTPUT__BASE_DIR", "./artifacts"))
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -303,10 +306,15 @@ class LinkedInScraper:
             "job_details": (By.CLASS_NAME, "job-details-jobs-unified-top-card__primary-description-container"),
         }
     
-    def browser_options(self) -> Options:
+    def browser_options(
+        self,
+        headless_override: Optional[bool] = None,
+        profile_suffix: str = "default",
+        remote_debugging_port: int = 9222,
+        headless_mode: str = "new",
+    ) -> Options:
         """配置浏览器选项 - 增强反检测"""
         options = webdriver.ChromeOptions()
-        options.add_argument("--start-maximized")
         options.add_argument("--ignore-certificate-errors")
         options.add_argument('--no-sandbox')
         options.add_argument("--disable-extensions")
@@ -325,21 +333,87 @@ class LinkedInScraper:
         # 防止Chrome崩溃的选项
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--no-first-run")
+        options.add_argument("--no-default-browser-check")
+        # Improve startup stability in restricted/containerized environments.
+        options.add_argument(f"--remote-debugging-port={remote_debugging_port}")
+        options.add_argument(f"--user-data-dir=/tmp/chrome-job-bot-profile-{profile_suffix}")
         # 避免固定端口冲突导致窗口异常关闭
         
-        if self.headless:
-            options.add_argument("--headless=new")  # 新版headless更难检测
+        effective_headless = self.headless if headless_override is None else headless_override
+        if effective_headless:
+            if headless_mode == "legacy":
+                options.add_argument("--headless")
+            else:
+                options.add_argument("--headless=new")  # 新版headless更难检测
+            options.add_argument("--window-size=1920,1080")
+        else:
+            options.add_argument("--start-maximized")
         
         return options
     
     def start_browser(self) -> None:
         """启动浏览器 - 带反检测措施"""
         log.info("正在启动浏览器...")
-        options = self.browser_options()
-        self.browser = webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()), 
-            options=options
-        )
+        browser_service: Optional[ChromeService] = None
+        system_driver = self._system_chromedriver_path()
+        if system_driver:
+            self._assert_driver_compatible(system_driver)
+            log.info(f"优先使用系统 chromedriver: {system_driver}")
+            browser_service = ChromeService(str(system_driver))
+        else:
+            try:
+                # Fallback to online install when system driver is missing.
+                browser_service = ChromeService(ChromeDriverManager().install())
+                log.info("系统 chromedriver 不可用，已使用在线下载驱动")
+            except Exception as online_err:
+                local_driver = self._local_chromedriver_path()
+                if not local_driver:
+                    raise RuntimeError(
+                        f"无法下载 chromedriver 且未找到本地驱动。原始错误: {online_err}"
+                    ) from online_err
+                self._assert_driver_compatible(local_driver)
+                log.warning(f"在线获取 chromedriver 失败，回退使用本地驱动: {local_driver}")
+                browser_service = ChromeService(str(local_driver))
+        startup_attempts = [
+            {"name": "normal-default-profile", "headless": self.headless, "profile": "default", "port": 9222, "headless_mode": "new"},
+            {"name": "headless-new-fallback", "headless": True, "profile": "headless-new", "port": 9223, "headless_mode": "new"},
+            {"name": "headless-legacy-fallback", "headless": True, "profile": "headless-legacy", "port": 9224, "headless_mode": "legacy"},
+            {"name": "clean-profile-legacy-fallback", "headless": True, "profile": f"clean-{int(time.time())}", "port": 9225, "headless_mode": "legacy"},
+        ]
+
+        last_error: Optional[Exception] = None
+        for attempt in startup_attempts:
+            try:
+                options = self.browser_options(
+                    headless_override=attempt["headless"],
+                    profile_suffix=attempt["profile"],
+                    remote_debugging_port=attempt["port"],
+                    headless_mode=attempt["headless_mode"],
+                )
+                log.info(
+                    f"尝试启动浏览器: {attempt['name']} "
+                    f"(headless={attempt['headless']}, mode={attempt['headless_mode']}, port={attempt['port']})"
+                )
+                self.browser = webdriver.Chrome(service=browser_service, options=options)
+                break
+            except Exception as startup_err:
+                last_error = startup_err
+                self._write_browser_startup_log(attempt["name"], startup_err)
+                log.warning(f"浏览器启动尝试失败: {attempt['name']} -> {startup_err}")
+                try:
+                    if self.browser:
+                        self.browser.quit()
+                except Exception:
+                    pass
+                self.browser = None
+
+        if not self.browser:
+            raise RuntimeError(
+                f"浏览器启动失败，已尝试 {len(startup_attempts)} 种模式。最后错误: {last_error}"
+            ) from last_error
+
         self.wait = WebDriverWait(self.browser, 30)
         
         # 执行反检测JavaScript
@@ -360,6 +434,88 @@ class LinkedInScraper:
             '''
         })
         log.info("浏览器启动成功 (已启用反检测)")
+
+    def _write_browser_startup_log(self, attempt_name: str, error: Exception) -> None:
+        """Write browser startup failure details for troubleshooting."""
+        try:
+            logs_dir = _out_dir() / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_path = logs_dir / f"chrome_startup_{ts}.log"
+            content = (
+                f"attempt={attempt_name}\n"
+                f"timestamp={datetime.now().isoformat()}\n"
+                f"headless_config={self.headless}\n"
+                f"error_type={type(error).__name__}\n"
+                f"error={error}\n"
+            )
+            log_path.write_text(content, encoding="utf-8")
+        except Exception as write_err:
+            log.debug(f"写入浏览器启动日志失败: {write_err}")
+
+    def _local_chromedriver_path(self) -> Optional[Path]:
+        """Return bundled chromedriver path for current OS."""
+        assets_dir = Path(__file__).parent / "assets"
+        if sys.platform == "darwin":
+            candidate = assets_dir / "chromedriver_darwin"
+        elif sys.platform.startswith("linux"):
+            candidate = assets_dir / "chromedriver_linux"
+        elif sys.platform.startswith("win"):
+            candidate = assets_dir / "chromedriver_windows"
+        else:
+            return None
+        if not candidate.exists():
+            return None
+        try:
+            # Ensure executable bit on POSIX to avoid startup failure.
+            if os.name != "nt":
+                mode = candidate.stat().st_mode
+                candidate.chmod(mode | 0o111)
+        except Exception:
+            pass
+        return candidate
+
+    def _system_chromedriver_path(self) -> Optional[Path]:
+        """Return chromedriver from PATH if available."""
+        system_path = shutil.which("chromedriver")
+        if not system_path:
+            return None
+        candidate = Path(system_path)
+        if not candidate.exists():
+            return None
+        return candidate
+
+    def _assert_driver_compatible(self, driver_path: Path) -> None:
+        """Fail fast when local driver major version mismatches Chrome."""
+        chrome_major = self._chrome_major_version()
+        driver_major = self._driver_major_version(driver_path)
+        if chrome_major is None or driver_major is None:
+            return
+        if chrome_major != driver_major:
+            raise RuntimeError(
+                "本地 chromedriver 与 Chrome 主版本不兼容："
+                f"driver={driver_major}, chrome={chrome_major}。"
+                "请升级 chromedriver（建议与 Chrome 主版本一致）或恢复联网下载驱动。"
+            )
+
+    def _chrome_major_version(self) -> Optional[int]:
+        chrome_bin = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+        if not chrome_bin.exists():
+            return None
+        try:
+            out = subprocess.check_output([str(chrome_bin), "--version"], text=True).strip()
+            match = re.search(r"(\d+)\.", out)
+            return int(match.group(1)) if match else None
+        except Exception:
+            return None
+
+    def _driver_major_version(self, driver_path: Path) -> Optional[int]:
+        try:
+            out = subprocess.check_output([str(driver_path), "--version"], text=True).strip()
+            match = re.search(r"ChromeDriver\s+(\d+)\.", out)
+            return int(match.group(1)) if match else None
+        except Exception:
+            return None
     
     def login(self) -> bool:
         """登录LinkedIn（支持Cookie、账号密码或手动登录）"""
@@ -2708,7 +2864,7 @@ class AIScorer:
         return (input_tokens / 1_000_000) * in_price + (output_tokens / 1_000_000) * out_price
 
     def _persist_token_usage(self, input_tokens: int, output_tokens: int, model: str, call_cost: float):
-        """将本次调用累计写入 out/token_usage.json（跨运行可追踪）。"""
+        """将本次调用累计写入 artifacts/token_usage.json（跨运行可追踪）。"""
         data = {
             "api_calls": 0,
             "input_tokens": 0,
@@ -3227,9 +3383,10 @@ def save_jobs_to_json(jobs: List[JobListing], filename: str = "scraped_jobs.json
 def main():
     """主函数"""
     # 加载配置
-    config_file = "scraper_config.yaml"
-    if not os.path.exists(config_file):
-        config_file = "config.yaml"
+    base_dir = Path(__file__).parent
+    config_file = base_dir / "scraper_config.yaml"
+    if not config_file.exists():
+        config_file = base_dir / "config.yaml"
     
     log.info(f"加载配置文件: {config_file}")
     with open(config_file, 'r', encoding='utf-8') as f:

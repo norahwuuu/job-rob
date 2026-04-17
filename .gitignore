@@ -1,8 +1,9 @@
 # Existing project-specific ignore
-LinkedIn-Collect-main/scraper_config.yaml
+pipeline-orchestrator/scraper_config.yaml
 
-# Ignore all output folders at any depth
+# Ignore all pipeline artifacts folders at any depth
 **/out/
+**/artifacts/
 
 # Environment and secrets
 **/.env
@@ -26,6 +27,23 @@ LinkedIn-Collect-main/scraper_config.yaml
 **/*cookies*.json
 **/*session*
 **/*history*
+**/*linkedin*cookie*
+**/*browser*cookie*
+
+# Personal profile and resume files
+**/cv.docx
+**/cv.pdf
+**/resume.json
+**/*resume*.docx
+**/*resume*.pdf
+**/*_Resume_*.docx
+**/*_Resume_*.pdf
+**/*.docx
+**/*.pdf
+**/*.DOCX
+**/*.PDF
+**/*personal*
+**/*profile*
 
 # Local logs and temp diagnostics
 **/logs/

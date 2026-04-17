@@ -70,7 +70,7 @@ filter:
   small_company_bonus: 2
   large_company_penalty: -5
 output:
-  base_dir: ./out
+  base_dir: ./artifacts
   by_date: true
 advanced:
   headless: false

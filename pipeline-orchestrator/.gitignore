@@ -151,3 +151,4 @@ logs
 
 # Pipeline generated outputs
 out/
+artifacts/

@@ -1,4 +1,4 @@
-# Word Editor
+# word_editor
 
 此子项目职责：**简历定制引擎**。  
 输入岗位 JD 和基础简历，输出修改后的 Word/PDF 简历。
@@ -13,7 +13,7 @@
 ## 本地运行
 
 ```bash
-cd "resume_AI_editor-main/Word Editor"
+cd "resume-customizer/word_editor"
 pip install -r requirements.txt
 python -m resume_modifier.main --resume "cv.docx" --job "job description" --output "./output"
 ```
@@ -33,6 +33,10 @@ python -m resume_modifier.api_server
 
 ## 调试产物
 
-- JSON 解析失败会落盘到：`out/logs/broken_ai_json_*.txt`
+- JSON 解析失败会落盘到：`artifacts/logs/broken_ai_json_*.txt`
 
-> 全流程说明请看仓库根目录 `README.md`。
+## 更多文档
+
+- 统一使用手册：`../HANDBOOK.md`
+- 插件联调说明：`../INTEGRATION_GUIDE.md`
+- 全流程说明：仓库根目录 `README.md`

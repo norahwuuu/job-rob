@@ -712,11 +712,11 @@ class AIAnalyzer:
 
     def _dump_broken_json_response(self, text: str, stage: str = "parse_failed") -> Optional[Path]:
         """
-        将无法解析的 AI 响应落盘到工作区 out/logs，便于后续排查。
+        将无法解析的 AI 响应落盘到工作区 artifacts/logs，便于后续排查。
         """
         try:
             root = Path(__file__).resolve().parents[3]
-            logs_dir = root / "out" / "logs"
+            logs_dir = root / "artifacts" / "logs"
             logs_dir.mkdir(parents=True, exist_ok=True)
             ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             out_file = logs_dir / f"broken_ai_json_{stage}_{ts}.txt"

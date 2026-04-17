@@ -19,14 +19,14 @@ cd auto-apply-project
 python -m auto_apply.main report
 
 # 从 jobs_progress 读取
-python -m auto_apply.main --data-dir ../out run-easy \
-  --jobs-progress ../out/jobs_progress.json \
+python -m auto_apply.main --data-dir ../artifacts run-easy \
+  --jobs-progress ../artifacts/jobs_progress.json \
   --max 10
 
 # 从 easy_todo 读取（推荐）
-python -m auto_apply.main --data-dir ../out run-easy-todo \
-  --easy-todo ../out/2026-04-16/easy_todo.txt \
-  --jobs-progress ../out/jobs_progress.json \
+python -m auto_apply.main --data-dir ../artifacts run-easy-todo \
+  --easy-todo ../artifacts/2026-04-16/easy_todo.txt \
+  --jobs-progress ../artifacts/jobs_progress.json \
   --max 5
 ```
 
