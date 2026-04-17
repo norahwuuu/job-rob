@@ -1,0 +1,257 @@
+{
+  "auto_applied": [
+    {
+      "job_id": "4394607669",
+      "title": "Full Stack Engineer",
+      "company": "ZYNE",
+      "url": "https://www.linkedin.com/jobs/view/4394607669",
+      "state": "SUBMITTED",
+      "reason": "Application submitted",
+      "resume_path": "./cv.pdf",
+      "source_status": "resume_ready"
+    },
+    {
+      "job_id": "4395274177",
+      "title": "JavaScript Developer, Contractor, Full-stack",
+      "company": "NodeJS, TypeScript, React, AWS",
+      "url": "https://www.linkedin.com/jobs/view/4395274177",
+      "state": "SUBMITTED",
+      "reason": "Application submitted",
+      "resume_path": "out/2026-04-14/resumes/Haonan_NodeJS,_JavaScript_Developer,_Contractor,_Full-stack.docx",
+      "source_status": "resume_ready"
+    },
+    {
+      "job_id": "4371167896",
+      "title": "Actico Platform & Java Developer",
+      "company": "Hybrid Madrid",
+      "url": "https://www.linkedin.com/jobs/view/4371167896",
+      "state": "SUBMITTED",
+      "reason": "Application submitted",
+      "resume_path": "/Users/amy/Desktop/LinkedIn-Easy-Apply-Bot/project/job-bot/LinkedIn-Collect-main/out/2026-04-16/resumes/Haonan_Hybrid_Actico_Platform_&_Java_Developer.pdf",
+      "source_status": "resume_ready"
+    }
+  ],
+  "manual_todo": [],
+  "skipped": [
+    {
+      "job_id": "4394398847",
+      "title": "Senior Software Engineer (m/w/d)",
+      "company": "ProOmea GmbH",
+      "url": "https://www.linkedin.com/jobs/view/4394398847",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396460802",
+      "title": "Senior Solutions Engineer — AI & Operations Research",
+      "company": "AGS",
+      "url": "https://www.linkedin.com/jobs/view/4396460802",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4361010380",
+      "title": "Senior/ Principal Full-Stack Engineer (B2C Anti-Cheat POC)",
+      "company": "A5 Labs",
+      "url": "https://www.linkedin.com/jobs/view/4361010380",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4381415518",
+      "title": "Softwareentwickler (Subscription Management)",
+      "company": "Hornetsecurity",
+      "url": "https://www.linkedin.com/jobs/view/4381415518",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396459093",
+      "title": "Senior Frontend Developer",
+      "company": "Remobi",
+      "url": "https://www.linkedin.com/jobs/view/4396459093",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4394605253",
+      "title": "Generative AI Engineer (LLM & AI Solutions) (m/w/d)",
+      "company": "CBTW",
+      "url": "https://www.linkedin.com/jobs/view/4394605253",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4380270559",
+      "title": "AI Engineer (all gender)",
+      "company": "ALTEN Germany",
+      "url": "https://www.linkedin.com/jobs/view/4380270559",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4394370127",
+      "title": "Senior Fullstack (Node.js + React.js)",
+      "company": "OnHires",
+      "url": "https://www.linkedin.com/jobs/view/4394370127",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396431713",
+      "title": "Full Stack AI Engineer",
+      "company": "Agentic Build-Out",
+      "url": "https://www.linkedin.com/jobs/view/4396431713",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4394345353",
+      "title": "React Native Freelancer",
+      "company": "Protech Talent",
+      "url": "https://www.linkedin.com/jobs/view/4394345353",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4392813835",
+      "title": "Senior Backend Engineer, KI-Startup Köln, m/w/d",
+      "company": "Bestandsfaktor",
+      "url": "https://www.linkedin.com/jobs/view/4392813835",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4394341577",
+      "title": "Java Developer (mwd)",
+      "company": "Optimyze Medical",
+      "url": "https://www.linkedin.com/jobs/view/4394341577",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396148817",
+      "title": "Senior AI Engineer / AI Architect",
+      "company": "NP Group",
+      "url": "https://www.linkedin.com/jobs/view/4396148817",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4392887051",
+      "title": "FinTech Engineer",
+      "company": "House of Creators",
+      "url": "https://www.linkedin.com/jobs/view/4392887051",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4393919835",
+      "title": "Remote Software Engineer",
+      "company": "Turing",
+      "url": "https://www.linkedin.com/jobs/view/4393919835",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396436789",
+      "title": "Java Entwickler :in Angular (all gender)",
+      "company": "ALTEN",
+      "url": "https://www.linkedin.com/jobs/view/4396436789",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4396449879",
+      "title": "Technischer Spezialist Salesforce (m/w/d) – Fokus Marketing Cloud",
+      "company": "DIS AG",
+      "url": "https://www.linkedin.com/jobs/view/4396449879",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4395867426",
+      "title": "Senior Embedded Software Engineer (m/w/d)",
+      "company": "Amoria Bond",
+      "url": "https://www.linkedin.com/jobs/view/4395867426",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4389810395",
+      "title": "Midlevel Fullstack Java Developer",
+      "company": "Coforge",
+      "url": "https://www.linkedin.com/jobs/view/4389810395",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4394632217",
+      "title": "Senior Software Engineer , Query Processing",
+      "company": "Firebolt",
+      "url": "https://www.linkedin.com/jobs/view/4394632217",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4395670897",
+      "title": "Delphi Developer",
+      "company": "Optimus Search",
+      "url": "https://www.linkedin.com/jobs/view/4395670897",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    },
+    {
+      "job_id": "4395670683",
+      "title": "Senior Softwareentwickler C# (w/m/d)",
+      "company": "Schotstek GmbH",
+      "url": "https://www.linkedin.com/jobs/view/4395670683",
+      "state": "SKIPPED",
+      "reason": "Status is not resume_ready",
+      "resume_path": "",
+      "source_status": "discovered"
+    }
+  ]
+}

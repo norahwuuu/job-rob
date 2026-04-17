@@ -1,0 +1,42 @@
+[
+  {
+    "job_id": "li-001",
+    "title": "Software Engineer (Python)",
+    "company": "Remote Labs",
+    "url": "https://linkedin.example/jobs/1",
+    "easy_apply": true,
+    "location": "Remote - Germany",
+    "requires_visa": false,
+    "score": 85
+  },
+  {
+    "job_id": "li-002",
+    "title": "Frontend Engineer (React)",
+    "company": "NextStack",
+    "url": "https://linkedin.example/jobs/2",
+    "easy_apply": false,
+    "location": "Berlin",
+    "requires_visa": false,
+    "score": 88
+  },
+  {
+    "job_id": "li-003",
+    "title": "Data Engineer",
+    "company": "Analytics AG",
+    "url": "https://linkedin.example/jobs/3",
+    "easy_apply": true,
+    "location": "Munich",
+    "requires_visa": true,
+    "score": 90
+  },
+  {
+    "job_id": "li-004",
+    "title": "Junior Backend Engineer",
+    "company": "CloudBase",
+    "url": "https://linkedin.example/jobs/4",
+    "easy_apply": true,
+    "location": "Hamburg",
+    "requires_visa": false,
+    "score": 45
+  }
+]

@@ -1,0 +1,36 @@
+# Existing project-specific ignore
+LinkedIn-Collect-main/scraper_config.yaml
+
+# Ignore all output folders at any depth
+**/out/
+
+# Environment and secrets
+**/.env
+**/.env.*
+**/*secret*
+**/*secrets*
+**/*token*
+**/*tokens*
+**/*apikey*
+**/*api_key*
+**/*credentials*
+**/credentials.json
+**/secrets.py
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Privacy-sensitive local state
+**/*cookies*.pkl
+**/*cookies*.json
+**/*session*
+**/*history*
+
+# Local logs and temp diagnostics
+**/logs/
+**/*.log
+
+# Python cache
+**/__pycache__/
+**/*.pyc

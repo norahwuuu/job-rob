@@ -22,6 +22,7 @@ import time
 import shutil
 import logging
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
@@ -42,8 +43,8 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S'))
 log.addHandler(console_handler)
 
-# 文件输出（统一放到 out/logs）
-LOG_DIR = Path("out") / "logs"
+# 文件输出（统一放到 LinkedIn-Collect-main/out/logs，避免受运行目录影响）
+LOG_DIR = Path(__file__).parent / "out" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 file_handler = logging.FileHandler(str(LOG_DIR / f'pipeline_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'), encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
@@ -60,6 +61,14 @@ STATUS_APPLIED = "applied"
 STATUS_SKIPPED = "skipped"
 STATUS_FAILED = "failed"
 STATUS_CLOSED = "closed"
+ALLOWED_CANONICAL_STATUSES = {
+    STATUS_DISCOVERED,
+    STATUS_RESUME_READY,
+    STATUS_APPLIED,
+    STATUS_SKIPPED,
+    STATUS_FAILED,
+    STATUS_CLOSED,
+}
 
 LEGACY_STATUS_ALIASES = {
     "pending": STATUS_DISCOVERED,
@@ -83,7 +92,8 @@ def normalize_job_status(status: Any, default: str = STATUS_DISCOVERED) -> str:
     value = str(status or "").strip()
     if not value:
         return default
-    return LEGACY_STATUS_ALIASES.get(value, value)
+    normalized = LEGACY_STATUS_ALIASES.get(value, value)
+    return normalized if normalized in ALLOWED_CANONICAL_STATUSES else default
 
 
 def is_pending_lifecycle_status(status: Any) -> bool:
@@ -215,7 +225,7 @@ class ConfigManager:
             (p for p in candidate_word_editor_paths if p.exists()),
             candidate_word_editor_paths[0],
         )
-        self.AUTO_APPLIER_PATH = self.base_dir.parent / "Auto_job_applier_linkedIn"
+        self.AUTO_APPLIER_PATH = self.base_dir.parent / "auto-apply-project"
         
         self.config = self._load_config()
         
@@ -495,7 +505,7 @@ class ConfigManager:
                 'exclude_german': True
             },
             'output': {
-                'base_dir': './output'
+                'base_dir': '../out'
             }
         }
 
@@ -630,47 +640,11 @@ AI_SERVER_URL={normalize_openai_base_url(self.config.get('ai', {}).get('server_u
         log.debug(f"已更新: {env_path}")
     
     def _sync_auto_applier(self):
-        """同步到 Auto_job_applier 的 config/secrets.py"""
+        """同步到 auto-apply-project（当前无额外敏感配置文件需要同步）。"""
         if not self.AUTO_APPLIER_PATH.exists():
-            log.warning(f"Auto_job_applier 项目不存在: {self.AUTO_APPLIER_PATH}")
+            log.warning(f"auto-apply-project 不存在: {self.AUTO_APPLIER_PATH}")
             return
-        
-        secrets_path = self.AUTO_APPLIER_PATH / "config" / "secrets.py"
-        
-        if not secrets_path.exists():
-            log.warning(f"secrets.py 不存在: {secrets_path}")
-            return
-        
-        try:
-            with open(secrets_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # 替换 LinkedIn 凭据
-            content = re.sub(
-                r'username\s*=\s*"[^"]*"',
-                f'username = "{self.config.get("linkedin", {}).get("username", "")}"',
-                content
-            )
-            content = re.sub(
-                r'password\s*=\s*"[^"]*"',
-                f'password = "{self.config.get("linkedin", {}).get("password", "")}"',
-                content
-            )
-            
-            # 替换 AI 配置
-            api_key = self.config.get('ai', {}).get('openai_api_key', '')
-            content = re.sub(
-                r'llm_api_key\s*=\s*"[^"]*"',
-                f'llm_api_key = "{api_key}"',
-                content
-            )
-            
-            with open(secrets_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            
-            log.debug(f"已更新: {secrets_path}")
-        except Exception as e:
-            log.warning(f"更新 secrets.py 失败: {e}")
+        log.debug("auto-apply-project 使用 jobs_progress 输入，无需 secrets.py 同步")
 
 
 # ============================================================
@@ -820,6 +794,10 @@ class OutputGenerator:
         self.today_dir = self.output_dir / datetime.now().strftime("%Y-%m-%d")
         self.easy_apply_dir = self.today_dir / "easy_apply"
         self.manual_dir = self.today_dir / "manual_apply"
+        # Standardized artifact names (snake_case, lowercase)
+        self.job_list_name = "job_list.txt"
+        self.easy_todo_name = "easy_todo.txt"
+        self.manual_todo_name = "manual_todo.txt"
     
     def setup_dirs(self):
         """创建目录结构"""
@@ -866,7 +844,7 @@ class OutputGenerator:
         
         # 2. 创建 URL 快捷方式
         # 在 base_name 后面加上分数后缀
-        suffix = f"_{score}分"
+        suffix = f"_score_{score}"
         
         linkedin_url = job.get('url', f"https://www.linkedin.com/jobs/view/{job.get('job_id')}")
         external_url = job.get('external_apply_url')
@@ -880,7 +858,7 @@ class OutputGenerator:
             # 手动申请: 优先使用公司官网链接
             if external_url:
                 # 创建公司官网申请链接
-                url_target = target_dir / f"{base_name}{suffix}_申请.url"
+                url_target = target_dir / f"{base_name}{suffix}_apply.url"
                 self._create_url_shortcut(url_target, external_url)
             else:
                 # 没有外部链接，使用 LinkedIn URL
@@ -894,14 +872,14 @@ class OutputGenerator:
         return str(pdf_target)
     
     def _clean_filename(self, name: str) -> str:
-        """清理文件名"""
-        # 移除不允许的字符
-        invalid_chars = '<>:"/\\|?*\n\r\t'
-        for char in invalid_chars:
-            name = name.replace(char, '')
-        # 移除多余空格
-        name = ' '.join(name.split())
-        return name.strip()
+        """清理文件名并统一到 ascii snake_case。"""
+        text = unicodedata.normalize("NFKD", str(name or ""))
+        text = text.encode("ascii", "ignore").decode("ascii")
+        # 非字母数字统一替换为下划线
+        text = re.sub(r"[^A-Za-z0-9]+", "_", text)
+        text = re.sub(r"_+", "_", text)
+        text = text.strip("_").lower()
+        return text or "unknown"
     
     def _create_url_shortcut(self, path: Path, url: str):
         """创建 Windows URL 快捷方式"""
@@ -955,7 +933,7 @@ AI 分析
         
         # 待申请列表（手动）
         if manual_jobs:
-            pending_list_path = self.manual_dir / "_待申请列表.txt"
+            pending_list_path = self.manual_dir / self.manual_todo_name
             content = f"""待申请岗位 ({len(manual_jobs)}个)
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {'=' * 50}
@@ -982,10 +960,13 @@ AI 分析
 """
             with open(pending_list_path, 'w', encoding='utf-8') as f:
                 f.write(content)
+            # Legacy compatibility
+            with open(self.manual_dir / "_待申请列表.txt", 'w', encoding='utf-8') as f:
+                f.write(content)
         
         # Easy Apply 列表
         if easy_apply_jobs:
-            easy_list_path = self.easy_apply_dir / "_EasyApply列表.txt"
+            easy_list_path = self.easy_apply_dir / "easy_apply_list.txt"
             content = f"""Easy Apply 岗位 ({len(easy_apply_jobs)}个)
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {'=' * 50}
@@ -1005,6 +986,87 @@ AI 分析
             
             with open(easy_list_path, 'w', encoding='utf-8') as f:
                 f.write(content)
+            # Legacy compatibility
+            with open(self.easy_apply_dir / "_EasyApply列表.txt", 'w', encoding='utf-8') as f:
+                f.write(content)
+
+    def generate_joblist(self, jobs: List[dict], interrupted: bool = False) -> List[Path]:
+        """生成拆分待办清单：easy_todo 和 manual_todo（完成/中断都生成）。"""
+        status_text = "中断" if interrupted else "完成"
+        easy_jobs = [j for j in jobs if j.get('is_easy_apply')]
+        manual_jobs = [j for j in jobs if not j.get('is_easy_apply')]
+
+        def _build_content(title: str, bucket: List[dict]) -> str:
+            def _detect_base_country(job: dict) -> str:
+                text = " ".join([
+                    str(job.get("location", "")),
+                    str(job.get("title", "")),
+                    str(job.get("company", "")),
+                    str(job.get("job_description", ""))[:800],
+                ]).lower()
+                swiss_tokens = ["switzerland", "schweiz", "zurich", "zuerich", "zürich", "geneva", "basel", "olten"]
+                if any(token in text for token in swiss_tokens):
+                    return "switzerland"
+                return "germany"
+
+            def _normalize_resume_path(resume_path: str) -> str:
+                if not resume_path:
+                    return ""
+                # 历史兼容：将旧路径 LinkedIn-Collect-main/out/... 归一到根目录 out/...
+                legacy_token = "/LinkedIn-Collect-main/out/"
+                if legacy_token in resume_path:
+                    _, tail = resume_path.split(legacy_token, 1)
+                    normalized = str((self.output_dir / tail).resolve())
+                    if Path(normalized).exists():
+                        return normalized
+                return str(Path(resume_path).resolve())
+
+            content = f"""{title} ({len(bucket)}个)
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+运行状态: {status_text}
+{'=' * 70}
+
+"""
+            if not bucket:
+                return content + "本次无记录。\n"
+
+            for i, job in enumerate(bucket, 1):
+                job_title = job.get('title', '')
+                company = job.get('company', '')
+                job_url = job.get('url') or (
+                    f"https://www.linkedin.com/jobs/view/{job['job_id']}"
+                    if job.get('job_id') else ""
+                )
+                resume_path = job.get('resume_path', '')
+                resume_abs = _normalize_resume_path(str(resume_path))
+                base_country = _detect_base_country(job)
+                content += f"{i:03d}. {job_title} @ {company}\n"
+                content += f"    Base Country: {base_country}\n"
+                content += f"    Job Link: {job_url}\n"
+                content += f"    PDF Path: {resume_abs}\n\n"
+            return content
+
+        easy_path = self.today_dir / self.easy_todo_name
+        manual_path = self.today_dir / self.manual_todo_name
+        list_path = self.today_dir / self.job_list_name
+        legacy_path = self.today_dir / "_JobList.txt"
+
+        with open(easy_path, 'w', encoding='utf-8') as f:
+            f.write(_build_content("Easy Apply Todo", easy_jobs))
+        with open(manual_path, 'w', encoding='utf-8') as f:
+            f.write(_build_content("Manual Apply Todo", manual_jobs))
+
+        # 兼容旧入口，保留一个合并版 JobList。
+        with open(list_path, 'w', encoding='utf-8') as f:
+            f.write(_build_content("Job List", jobs))
+        with open(legacy_path, 'w', encoding='utf-8') as f:
+            f.write(_build_content("Job List", jobs))
+
+        log.info(f"已生成待办清单: {easy_path}")
+        log.info(f"已生成待办清单: {manual_path}")
+        log.info(f"已生成汇总清单: {list_path}")
+        log.info(f"已生成兼容清单: {legacy_path}")
+        return [easy_path, manual_path, list_path, legacy_path]
 
 
 # ============================================================
@@ -1055,8 +1117,11 @@ class Pipeline:
     def __init__(self, config_path: str = "pipeline_config.yaml"):
         self.config_mgr = ConfigManager(config_path)
         self.config = self.config_mgr.config
-        output_dir = self.config.get('output', {}).get('base_dir', './output')
-        self.base_dir = Path(output_dir)
+        # 统一输出目录到工作区根目录: job-bot/out
+        output_dir_path = (self.config_mgr.base_dir.parent / "out").resolve()
+        output_dir = str(output_dir_path)
+        self.config.setdefault("output", {})["base_dir"] = output_dir
+        self.base_dir = output_dir_path
         self.artifacts = PipelineArtifacts()
         self.tracker = ProgressTracker(output_dir)
         self.output_gen = OutputGenerator(output_dir)
@@ -1336,12 +1401,34 @@ class Pipeline:
             
             normalized_jobs = []
             status_changed = False
+            schema_changed = False
             for job in jobs:
                 normalized = dict(job)
-                canonical_status = normalize_job_status(job.get('status'))
+                # 统一状态字段（兼容历史 state/source_status）
+                raw_status = job.get('status')
+                if not raw_status and job.get('state'):
+                    raw_status = job.get('state')
+                    schema_changed = True
+                canonical_status = normalize_job_status(raw_status)
                 if canonical_status != job.get('status'):
                     status_changed = True
                 normalized['status'] = canonical_status
+                if 'state' in normalized:
+                    normalized.pop('state', None)
+                    schema_changed = True
+                # 主文件最小 schema 兜底
+                required_defaults = {
+                    "job_id": str(job.get("job_id", "")),
+                    "title": job.get("title", ""),
+                    "company": job.get("company", ""),
+                    "url": job.get("url", ""),
+                    "is_easy_apply": bool(job.get("is_easy_apply", False)),
+                    "status": canonical_status,
+                }
+                for k, v in required_defaults.items():
+                    if k not in normalized:
+                        normalized[k] = v
+                        schema_changed = True
                 normalized_jobs.append(normalized)
             jobs = normalized_jobs
             
@@ -1360,11 +1447,13 @@ class Pipeline:
             
             unique_jobs = list(seen.values())
             
-            if len(jobs) > len(unique_jobs) or status_changed:
+            if len(jobs) > len(unique_jobs) or status_changed or schema_changed:
                 if len(jobs) > len(unique_jobs):
                     log.info(f"jobs_progress 去重: {len(jobs)} -> {len(unique_jobs)} (移除 {len(jobs) - len(unique_jobs)} 个重复)")
                 elif status_changed:
                     log.info("jobs_progress 状态已规范为 canonical 命名")
+                elif schema_changed:
+                    log.info("jobs_progress 已完成 schema 规范化")
                 # 保存去重或规范化后的数据
                 with open(jobs_file, 'w', encoding='utf-8') as f:
                     json.dump(unique_jobs, f, ensure_ascii=False, indent=2)
@@ -1710,70 +1799,106 @@ class Pipeline:
         profile_cfg = self.config.get('profile', {})
         resume_name = profile_cfg.get('resume_file_prefix', 'Candidate_Resume')
         
-        for job in new_jobs:  # 已按分数排序
-            job_id = job.get('job_id')
-            title = job.get('title', 'Unknown')
-            company = job.get('company', 'Unknown')
-            is_easy = job.get('is_easy_apply', False)
-            
-            log.info(f"处理: [{job.get('ai_score', 0):.0f}分] {company} - {title}")
-            
-            # 添加到tracker
-            self.tracker.add_job(job)
-            
-            # 生成定制简历
-            try:
-                resume_pdf_path = self._generate_resume(job, base_resume, base_pdf)
-                if self._last_resume_error_type == "quota_exhausted":
-                    raise RuntimeError(self._last_resume_error_message or "AI 简历生成失败：配额不足")
+        interrupted = False
+        run_error = None
+        try:
+            for job in new_jobs:  # 已按分数排序
+                job_id = job.get('job_id')
+                title = job.get('title', 'Unknown')
+                company = job.get('company', 'Unknown')
+                is_easy = job.get('is_easy_apply', False)
+                
+                log.info(f"处理: [{job.get('ai_score', 0):.0f}分] {company} - {title}")
+                
+                # 添加到tracker
+                self.tracker.add_job(job)
+                
+                # 生成定制简历
+                try:
+                    retryable_markers = [
+                        "无法解析 AI 响应的 JSON",
+                        "JSON 解析失败",
+                        "429",
+                        "RESOURCE_EXHAUSTED",
+                        "timeout",
+                        "timed out",
+                        "connection",
+                    ]
+                    max_attempts = 3
+                    resume_pdf_path = None
+                    last_err: Optional[Exception] = None
+                    for attempt in range(1, max_attempts + 1):
+                        try:
+                            resume_pdf_path = self._generate_resume(job, base_resume, base_pdf)
+                            break
+                        except Exception as gen_err:
+                            last_err = gen_err
+                            err_text = str(gen_err).lower()
+                            retryable = any(marker.lower() in err_text for marker in retryable_markers)
+                            if attempt >= max_attempts or not retryable:
+                                raise
+                            wait_s = attempt * 2
+                            log.warning(f"  生成失败，{wait_s}s 后重试({attempt}/{max_attempts}): {gen_err}")
+                            time.sleep(wait_s)
+                    if resume_pdf_path is None and last_err is not None:
+                        raise last_err
+                    if self._last_resume_error_type == "quota_exhausted":
+                        raise RuntimeError(self._last_resume_error_message or "AI 简历生成失败：配额不足")
 
-                if resume_pdf_path:
-                    # 生成输出文件
-                    counter = easy_counter if is_easy else manual_counter
-                    output_path = self.output_gen.generate_job_files(job, resume_pdf_path, counter, resume_name)
-                    
-                    if is_easy:
-                        easy_counter += 1
+                    if resume_pdf_path:
+                        # 生成输出文件
+                        counter = easy_counter if is_easy else manual_counter
+                        output_path = self.output_gen.generate_job_files(job, resume_pdf_path, counter, resume_name)
+                        
+                        if is_easy:
+                            easy_counter += 1
+                        else:
+                            manual_counter += 1
+                        
+                        self.tracker.update_status(job_id, STATUS_RESUME_READY, output_path)
+                        
+                        # 同步 resume_path 到 job 字典（用于 jobs_progress.json）
+                        job['resume_path'] = output_path
+                        job['status'] = STATUS_RESUME_READY
+                        self._sync_single_resume_path_to_progress(job)
+                        
+                        processed_jobs.append(job)
+                        log.info(f"  ✓ 已生成")
                     else:
-                        manual_counter += 1
-                    
-                    self.tracker.update_status(job_id, STATUS_RESUME_READY, output_path)
-                    
-                    # 同步 resume_path 到 job 字典（用于 jobs_progress.json）
-                    job['resume_path'] = resume_pdf_path
-                    job['status'] = STATUS_RESUME_READY
-                    self._sync_single_resume_path_to_progress(job)
-                    
-                    processed_jobs.append(job)
-                    log.info(f"  ✓ 已生成")
-                else:
-                    raise RuntimeError("AI 简历生成失败：未返回可用简历文件路径")
-                    
-            except Exception as e:
-                log.error(f"  ✗ 处理失败: {e}")
-                append_resume_failure_log(job, str(e))
-                raise
-        
-        # 生成汇总
-        self.output_gen.generate_summary(processed_jobs)
-        self.tracker.save()
-        
-        # 同步简历路径回 jobs_progress.json
-        self._sync_resume_paths_to_progress(processed_jobs)
+                        raise RuntimeError("AI 简历生成失败：未返回可用简历文件路径")
+                        
+                except Exception as e:
+                    log.error(f"  ✗ 处理失败: {e}")
+                    append_resume_failure_log(job, str(e))
+                    raise
+        except Exception as e:
+            interrupted = True
+            run_error = e
+        finally:
+            # 生成汇总与 JobList（即使中断也执行）
+            self.output_gen.generate_summary(processed_jobs)
+            self.output_gen.generate_joblist(processed_jobs, interrupted=interrupted)
+            self.tracker.save()
+            
+            # 同步简历路径回 jobs_progress.json
+            self._sync_resume_paths_to_progress(processed_jobs)
 
-        if quota_skipped_jobs:
-            quota_file = self._artifact_paths()["quota_retry_queue"]
-            try:
-                existing = []
-                if quota_file.exists():
-                    with open(quota_file, 'r', encoding='utf-8') as f:
-                        existing = json.load(f) or []
-                existing.extend(quota_skipped_jobs)
-                with open(quota_file, 'w', encoding='utf-8') as f:
-                    json.dump(existing, f, ensure_ascii=False, indent=2)
-                log.info(f"已记录配额跳过清单: {quota_file} (+{len(quota_skipped_jobs)} 条)")
-            except Exception as e:
-                log.warning(f"写入配额跳过清单失败: {e}")
+            if quota_skipped_jobs:
+                quota_file = self._artifact_paths()["quota_retry_queue"]
+                try:
+                    existing = []
+                    if quota_file.exists():
+                        with open(quota_file, 'r', encoding='utf-8') as f:
+                            existing = json.load(f) or []
+                    existing.extend(quota_skipped_jobs)
+                    with open(quota_file, 'w', encoding='utf-8') as f:
+                        json.dump(existing, f, ensure_ascii=False, indent=2)
+                    log.info(f"已记录配额跳过清单: {quota_file} (+{len(quota_skipped_jobs)} 条)")
+                except Exception as e:
+                    log.warning(f"写入配额跳过清单失败: {e}")
+
+        if run_error is not None:
+            raise run_error
         
         log.info(f"\n简历生成完成: {len(processed_jobs)} 个")
         log.info(f"  - Easy Apply: {easy_counter - 1} 个")
@@ -1781,6 +1906,7 @@ class Pipeline:
         if quota_skipped_jobs:
             log.info(f"  - 配额跳过: {len(quota_skipped_jobs)} 个")
         log.info(f"输出目录: {self.output_gen.today_dir}")
+        self.generate_daily_summary()
         
         return processed_jobs
     
@@ -1993,10 +2119,16 @@ AI Reason: {job.get('ai_reason', '')}
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write(content)
     
-    def run_apply(self, max_jobs: int = 10):
+    def run_apply(
+        self,
+        max_jobs: int = 10,
+        date_str: Optional[str] = None,
+        target_job_id: Optional[str] = None,
+        easy_todo_path: Optional[str] = None,
+    ):
         """阶段3: 自动申请 Easy Apply
         
-        调用 Auto_job_applier_linkedIn 项目的 apply_from_progress.py
+        调用 auto-apply-project 的 run-easy 流程
         通过子进程方式运行，避免跨项目依赖问题
         """
         log.info("=" * 60)
@@ -2021,6 +2153,8 @@ AI Reason: {job.get('ai_reason', '')}
             if j.get('ai_score', 0) >= min_score 
             and j.get('passed_filter', True)
             and j.get('is_easy_apply', False)  # 只投递 Easy Apply 岗位
+            and normalize_job_status(j.get('status')) == STATUS_RESUME_READY
+            and bool(j.get('resume_path'))
             and (
                 not exclude_german_jd
                 or not _jd_lang.is_mostly_german_job_text(
@@ -2033,85 +2167,112 @@ AI Reason: {job.get('ai_reason', '')}
         pending_jobs.sort(key=lambda x: self._job_sort_score(x), reverse=True)
         
         if not pending_jobs:
-            log.info("没有待申请的 Easy Apply 高分岗位")
-            return
+            log.info("没有待申请的 Easy Apply 高分岗位（将尝试按 easy_todo.txt 执行）")
         
-        log.info(f"待申请 Easy Apply 岗位: {len(pending_jobs)} 个")
+        if pending_jobs:
+            log.info(f"待申请 Easy Apply 岗位: {len(pending_jobs)} 个")
+            
+            # 显示列表
+            log.info("\n待申请岗位列表:")
+            for i, job in enumerate(pending_jobs[:15], 1):
+                log.info(f"  {i}. [{job.get('ai_score', 0):.0f}分] {job.get('company', '')} - {job.get('title', '')[:35]}")
+            
+            if len(pending_jobs) > 15:
+                log.info(f"  ... 还有 {len(pending_jobs) - 15} 个")
         
-        # 显示列表
-        log.info("\n待申请岗位列表:")
-        for i, job in enumerate(pending_jobs[:15], 1):
-            log.info(f"  {i}. [{job.get('ai_score', 0):.0f}分] {job.get('company', '')} - {job.get('title', '')[:35]}")
-        
-        if len(pending_jobs) > 15:
-            log.info(f"  ... 还有 {len(pending_jobs) - 15} 个")
-        
-        # 通过子进程调用 Auto_job_applier
+        # 通过子进程调用 auto-apply-project
         auto_applier_path = self.config_mgr.AUTO_APPLIER_PATH
-        apply_script = auto_applier_path / "apply_from_progress.py"
+        apply_entry = auto_applier_path / "auto_apply" / "main.py"
         
-        if not apply_script.exists():
-            log.error(f"找不到 apply_from_progress.py: {apply_script}")
+        if not apply_entry.exists():
+            log.error(f"找不到 auto-apply-project 入口: {apply_entry}")
             return
         
         artifact_paths = self._artifact_paths()
         jobs_progress_file = artifact_paths["job_registry"]
         results_file = artifact_paths["apply_results"]
+        if easy_todo_path:
+            easy_todo_file = Path(easy_todo_path)
+        elif date_str:
+            easy_todo_file = self.base_dir / date_str / "easy_todo.txt"
+        else:
+            easy_todo_file = self.output_gen.today_dir / "easy_todo.txt"
+        if not easy_todo_file.exists():
+            try:
+                candidates = sorted(self.base_dir.glob("*/easy_todo.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
+            except Exception:
+                candidates = []
+            if candidates:
+                easy_todo_file = candidates[0]
         
-        log.info(f"\n调用 Auto_job_applier 自动申请...")
-        log.info(f"  脚本: {apply_script}")
-        log.info(f"  输入: {jobs_progress_file}")
+        log.info(f"\n调用 auto-apply-project 自动申请...")
+        log.info(f"  入口: {apply_entry}")
+        log.info(f"  输入: {easy_todo_file}")
         log.info(f"  输出: {results_file}")
+
+        if not easy_todo_file.exists():
+            log.error(f"找不到 easy_todo 文件: {easy_todo_file}")
+            return
         
         try:
             import subprocess
             
             cmd = [
-                "python",
-                str(apply_script),
+                sys.executable,
+                "-m",
+                "auto_apply.main",
+                "--data-dir",
+                str(self.base_dir),
+                "run-easy-todo",
+                "--easy-todo",
+                str(easy_todo_file),
+                "--jobs-progress",
                 str(jobs_progress_file),
-                "--output", str(results_file),
-                "--min-score", str(min_score),
-                "--max", str(max_jobs)
+                "--max",
+                str(max_jobs),
             ]
+            if target_job_id:
+                cmd.extend(["--job-id", str(target_job_id)])
             
             log.info(f"执行命令: {' '.join(cmd)}")
-            
-            # 使用 Popen 以便实时读取输出
-            process = subprocess.Popen(
+
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(auto_applier_path)
+            process = subprocess.run(
                 cmd,
                 cwd=str(auto_applier_path),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                capture_output=True,
                 text=True,
-                bufsize=1
+                env=env,
+                check=False,
             )
-            
-            # 实时读取输出并解析结果
-            apply_results = []
-            for line in iter(process.stdout.readline, ''):
-                line = line.rstrip()
-                if line.startswith("RESULT:"):
-                    # 解析实时结果
-                    try:
-                        import json as json_module
-                        result = json_module.loads(line[7:])
-                        apply_results.append(result)
-                        status = "✅ 成功" if result.get('success') else "❌ 失败"
-                        log.info(f"{status} {result.get('company', '')} - {result.get('title', '')[:30]}")
-                    except:
-                        pass
-                elif line:
-                    log.info(f"[Auto_job_applier] {line}")
-            
-            process.wait()
-            
-            # 同步结果回 tracker
-            if apply_results:
-                self._sync_apply_results(apply_results)
-                log.info(f"\n申请完成，共处理 {len(apply_results)} 个岗位")
-                success_count = sum(1 for r in apply_results if r.get('success'))
-                log.info(f"  成功: {success_count}, 失败: {len(apply_results) - success_count}")
+            output_text = (process.stdout or "").strip()
+            if output_text:
+                log.info(f"[auto-apply-project] {output_text}")
+            if process.returncode != 0:
+                raise RuntimeError(process.stderr.strip() or f"子进程退出码 {process.returncode}")
+
+            # auto-apply-project 会直接写 out/auto_applied.json / manual_todo.json / apply_results.json
+            if results_file.exists():
+                try:
+                    with open(results_file, "r", encoding="utf-8") as f:
+                        payload = json.load(f) or {}
+                    auto_applied = payload.get("auto_applied", []) if isinstance(payload, dict) else []
+                    if auto_applied:
+                        self._sync_apply_results([
+                            {"job_id": row.get("job_id"), "success": True}
+                            for row in auto_applied
+                            if row.get("job_id")
+                        ])
+                        self._sync_apply_status_to_progress([
+                            str(row.get("job_id"))
+                            for row in auto_applied
+                            if row.get("job_id")
+                        ])
+                    log.info(f"\n申请完成，共自动处理 {len(auto_applied)} 个岗位")
+                    self.generate_daily_summary()
+                except Exception as e:
+                    log.warning(f"读取申请结果失败: {e}")
             
         except Exception as e:
             log.error(f"自动申请失败: {e}")
@@ -2130,6 +2291,61 @@ AI Reason: {job.get('ai_reason', '')}
             else:
                 # 标记失败，可以后续重试
                 self.tracker.update_status(job_id, STATUS_FAILED)
+
+    def _sync_apply_status_to_progress(self, applied_job_ids: List[str]):
+        """将自动投递成功结果回写到统一 jobs_progress.json（status=applied）。"""
+        if not applied_job_ids:
+            return
+        jobs_file = self._artifact_paths()["job_registry"]
+        if not jobs_file.exists():
+            return
+        try:
+            with open(jobs_file, "r", encoding="utf-8") as f:
+                jobs = json.load(f) or []
+            updated = 0
+            applied_set = {str(i) for i in applied_job_ids}
+            for row in jobs:
+                if str(row.get("job_id")) in applied_set:
+                    row["status"] = STATUS_APPLIED
+                    updated += 1
+            if updated:
+                with open(jobs_file, "w", encoding="utf-8") as f:
+                    json.dump(jobs, f, ensure_ascii=False, indent=2)
+                log.info(f"✓ 已回写 {updated} 个岗位状态到 jobs_progress.json")
+        except Exception as e:
+            log.warning(f"回写 jobs_progress 申请状态失败: {e}")
+
+    def generate_daily_summary(self):
+        """生成当日 summary.json，便于快速复盘。"""
+        try:
+            jobs = self._load_jobs_progress()
+            total = len(jobs)
+            discovered = len([j for j in jobs if normalize_job_status(j.get("status")) == STATUS_DISCOVERED])
+            resume_ready = len([j for j in jobs if normalize_job_status(j.get("status")) == STATUS_RESUME_READY])
+            applied = len([j for j in jobs if normalize_job_status(j.get("status")) == STATUS_APPLIED])
+            failed = len([j for j in jobs if normalize_job_status(j.get("status")) == STATUS_FAILED])
+            easy_total = len([j for j in jobs if bool(j.get("is_easy_apply"))])
+            manual_total = total - easy_total
+            summary = {
+                "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "total_jobs": total,
+                "easy_jobs": easy_total,
+                "manual_jobs": manual_total,
+                "status": {
+                    "discovered": discovered,
+                    "resume_ready": resume_ready,
+                    "applied": applied,
+                    "failed": failed,
+                },
+            }
+            day_dir = self.output_gen.today_dir
+            day_dir.mkdir(parents=True, exist_ok=True)
+            out_file = day_dir / "summary.json"
+            with open(out_file, "w", encoding="utf-8") as f:
+                json.dump(summary, f, ensure_ascii=False, indent=2)
+            log.info(f"已生成日报: {out_file}")
+        except Exception as e:
+            log.warning(f"生成日报失败: {e}")
     
     def run_status(self):
         """查看状态"""
@@ -2264,6 +2480,9 @@ def main():
   python run_pipeline.py rescore-llm --quota-skipped # 只重评 quota_skipped_jobs.json 里的失败岗位（更快）
   python run_pipeline.py apply        # 只自动申请 Easy Apply
   python run_pipeline.py apply --max 10  # 最多申请10个岗位
+  python run_pipeline.py apply --date 2026-04-16 --max 5  # 指定日期 easy_todo
+  python run_pipeline.py apply --job-id 4371167896 --max 1 # 仅投递单个岗位
+  python run_pipeline.py apply --easy-todo /abs/path/easy_todo.txt --max 3
   python run_pipeline.py status       # 查看进度
   python run_pipeline.py done 001     # 标记编号001的手动申请为完成
   python run_pipeline.py done google  # 标记包含"google"的岗位为完成
@@ -2280,6 +2499,9 @@ def main():
     parser.add_argument('--quota-skipped', action='store_true', help='仅重评 quota_skipped_jobs.json 中的岗位（并结合 ai_reason 失败标记）')
     parser.add_argument('--quota-skipped-file', default=None, help='quota_skipped_jobs.json 路径（仅用于 --quota-skipped）')
     parser.add_argument('--max', type=int, default=None, help='最多申请的岗位数量 (用于 apply 命令)')
+    parser.add_argument('--date', default=None, help='指定 easy_todo 日期目录，例如 2026-04-16（用于 apply）')
+    parser.add_argument('--job-id', default=None, dest='job_id', help='仅投递指定 job_id（用于 apply）')
+    parser.add_argument('--easy-todo', default=None, dest='easy_todo', help='直接指定 easy_todo.txt 路径（用于 apply）')
     parser.add_argument('--force', action='store_true', help='强制重新处理已处理过的岗位')
     parser.add_argument('--min-score', type=int, default=None, dest='min_score', help='最低 AI 分，覆盖 pipeline_config 中 filter.min_ai_score（仅 generate）')
     
@@ -2304,7 +2526,12 @@ def main():
                 quota_skipped_file=args.quota_skipped_file,
             )
         elif args.command == 'apply':
-            pipeline.run_apply(max_jobs=args.max)
+            pipeline.run_apply(
+                max_jobs=args.max,
+                date_str=args.date,
+                target_job_id=args.job_id,
+                easy_todo_path=args.easy_todo,
+            )
         elif args.command == 'status':
             pipeline.run_status()
         elif args.command == 'done':

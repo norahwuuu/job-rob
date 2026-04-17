@@ -6,6 +6,7 @@ import json
 import re
 from typing import List, Optional, Dict, Any, Set
 from dataclasses import dataclass, asdict
+from datetime import datetime
 from openai import OpenAI
 
 import sys
@@ -709,6 +710,35 @@ class AIAnalyzer:
 
         self.client = OpenAI(**client_kwargs)
 
+    def _dump_broken_json_response(self, text: str, stage: str = "parse_failed") -> Optional[Path]:
+        """
+        将无法解析的 AI 响应落盘到工作区 out/logs，便于后续排查。
+        """
+        try:
+            root = Path(__file__).resolve().parents[3]
+            logs_dir = root / "out" / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            out_file = logs_dir / f"broken_ai_json_{stage}_{ts}.txt"
+            body = text or ""
+            out_file.write_text(
+                "\n".join([
+                    f"timestamp={datetime.now().isoformat()}",
+                    f"stage={stage}",
+                    "",
+                    "=== preview(1000) ===",
+                    body[:1000],
+                    "",
+                    "=== full_response ===",
+                    body,
+                ]),
+                encoding="utf-8",
+            )
+            print(f"⚠️ 已保存无法解析响应: {out_file}")
+            return out_file
+        except Exception:
+            return None
+
     def _parse_json_safely(self, text: str) -> dict:
         """
         安全解析 JSON，自动修复常见格式问题
@@ -806,6 +836,79 @@ class AIAnalyzer:
         except json.JSONDecodeError:
             pass
         
+        # 额外修复：处理字符串中的未转义引号/换行
+        def repair_json_string_literals(raw: str) -> str:
+            """
+            修复 AI 常见输出问题：
+            1) 字符串内出现未转义双引号
+            2) 字符串内直接出现换行符
+            """
+            out: list[str] = []
+            in_string = False
+            escaped = False
+            i = 0
+            length = len(raw)
+
+            while i < length:
+                ch = raw[i]
+
+                if not in_string:
+                    if ch == '"':
+                        in_string = True
+                    out.append(ch)
+                    i += 1
+                    continue
+
+                # in_string == True
+                if escaped:
+                    out.append(ch)
+                    escaped = False
+                    i += 1
+                    continue
+
+                if ch == '\\':
+                    out.append(ch)
+                    escaped = True
+                    i += 1
+                    continue
+
+                if ch == '\n':
+                    out.append("\\n")
+                    i += 1
+                    continue
+
+                if ch == '\r':
+                    # 统一丢弃 CR，避免与 \n 组合造成重复
+                    i += 1
+                    continue
+
+                if ch == '"':
+                    # 判断是字符串结束，还是正文中的未转义引号
+                    j = i + 1
+                    while j < length and raw[j] in (' ', '\t', '\n', '\r'):
+                        j += 1
+
+                    if j < length and raw[j] in [',', '}', ']']:
+                        # 这是合法的字符串结束引号
+                        out.append(ch)
+                        in_string = False
+                    else:
+                        # 视为字符串正文中的引号，转义
+                        out.append('\\"')
+                    i += 1
+                    continue
+
+                out.append(ch)
+                i += 1
+
+            return "".join(out)
+
+        try:
+            repaired = repair_json_string_literals(cleaned)
+            return ensure_dict(json.loads(repaired))
+        except json.JSONDecodeError:
+            pass
+
         # 最后的尝试：使用更宽松的解析
         try:
             # 替换一些常见问题
@@ -822,11 +925,13 @@ class AIAnalyzer:
             relaxed = re.sub(r']\s*\[', '], [', relaxed)
             # 修复数值/字符串后缺失逗号的情况: "value"\n"key" -> "value",\n"key"
             relaxed = re.sub(r'"\s*\n\s*"', '",\n"', relaxed)
+            relaxed = repair_json_string_literals(relaxed)
             return ensure_dict(json.loads(relaxed))
         except json.JSONDecodeError:
             pass
         
-        # 如果所有尝试都失败，抛出原始错误
+        # 如果所有尝试都失败，先落盘再抛错
+        self._dump_broken_json_response(text, stage="parse_failed")
         raise ValueError(f"无法解析 AI 响应的 JSON。响应前500字符: {text[:500]}")
     
     def _call_openai(self, system_prompt: str, user_prompt: str) -> str:
@@ -867,6 +972,36 @@ class AIAnalyzer:
                 return content
 
         raise ValueError(f"无法识别的 OpenAI 响应类型: {type(response)}")
+
+    def _repair_json_with_llm(self, raw_text: str) -> Optional[dict]:
+        """
+        当本地 JSON 修复失败时，调用一次模型做“纯修复”。
+        仅允许输出合法 JSON，不允许改写字段语义。
+        """
+        if not raw_text or not raw_text.strip():
+            return None
+
+        repair_system_prompt = (
+            "You are a strict JSON repair engine. "
+            "Your only task is to transform broken JSON-like text into valid JSON. "
+            "Do not add commentary. Output JSON only."
+        )
+        repair_user_prompt = f"""Fix this broken JSON-like content to valid JSON.
+Rules:
+1) Keep original keys and values as much as possible.
+2) Escape invalid quotes/newlines in string values.
+3) Remove trailing commas and fix missing commas/brackets.
+4) Return ONLY JSON object/array text.
+
+Input:
+{raw_text}
+"""
+        try:
+            repaired_text = self._call_openai(repair_system_prompt, repair_user_prompt)
+            return self._parse_json_safely(repaired_text)
+        except Exception:
+            self._dump_broken_json_response(raw_text, stage="llm_repair_failed")
+            return None
 
     def analyze(self, job_description: str, resume_text: str) -> AnalysisResult:
         """
@@ -923,8 +1058,15 @@ Examples of correct usage:
         
         result_text = self._call_openai(SYSTEM_PROMPT, user_prompt)
         
-        # 尝试解析 JSON，如果失败则尝试修复
-        result_json = self._parse_json_safely(result_text)
+        # 尝试解析 JSON，如果失败则触发一次 LLM 修复兜底
+        try:
+            result_json = self._parse_json_safely(result_text)
+        except ValueError:
+            repaired = self._repair_json_with_llm(result_text)
+            if repaired is None:
+                raise
+            print("⚠️ 本地 JSON 修复失败，已通过 LLM 修复响应")
+            result_json = repaired
         
         # 转换为 AnalysisResult
         modifications = [
@@ -1132,8 +1274,15 @@ Please analyze the page content to identify any application questions, and gener
 
         result_text = self._call_openai(qa_system_prompt, user_prompt)
         
-        # 解析响应（使用安全解析）
-        result_json = self._parse_json_safely(result_text)
+        # 解析响应（使用安全解析 + LLM 修复兜底）
+        try:
+            result_json = self._parse_json_safely(result_text)
+        except ValueError:
+            repaired = self._repair_json_with_llm(result_text)
+            if repaired is None:
+                raise
+            print("⚠️ QA JSON 本地修复失败，已通过 LLM 修复响应")
+            result_json = repaired
         
         return result_json.get("questions", [])
 

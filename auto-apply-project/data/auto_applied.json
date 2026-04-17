@@ -1,0 +1,32 @@
+[
+  {
+    "job_id": "4394607669",
+    "title": "Full Stack Engineer",
+    "company": "ZYNE",
+    "url": "https://www.linkedin.com/jobs/view/4394607669",
+    "state": "SUBMITTED",
+    "reason": "Application submitted",
+    "resume_path": "./cv.pdf",
+    "source_status": "resume_ready"
+  },
+  {
+    "job_id": "4395274177",
+    "title": "JavaScript Developer, Contractor, Full-stack",
+    "company": "NodeJS, TypeScript, React, AWS",
+    "url": "https://www.linkedin.com/jobs/view/4395274177",
+    "state": "SUBMITTED",
+    "reason": "Application submitted",
+    "resume_path": "out/2026-04-14/resumes/Haonan_NodeJS,_JavaScript_Developer,_Contractor,_Full-stack.docx",
+    "source_status": "resume_ready"
+  },
+  {
+    "job_id": "4371167896",
+    "title": "Actico Platform & Java Developer",
+    "company": "Hybrid Madrid",
+    "url": "https://www.linkedin.com/jobs/view/4371167896",
+    "state": "SUBMITTED",
+    "reason": "Application submitted",
+    "resume_path": "/Users/amy/Desktop/LinkedIn-Easy-Apply-Bot/project/job-bot/LinkedIn-Collect-main/out/2026-04-16/resumes/Haonan_Hybrid_Actico_Platform_&_Java_Developer.pdf",
+    "source_status": "resume_ready"
+  }
+]
