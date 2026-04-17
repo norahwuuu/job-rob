@@ -26,7 +26,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import subprocess
 from urllib.parse import urlparse, urlunparse
 
@@ -792,7 +792,14 @@ class OutputGenerator:
         self.manual_dir.mkdir(parents=True, exist_ok=True)
         log.info(f"输出目录: {self.today_dir}")
     
-    def generate_job_files(self, job: dict, resume_pdf_path: str, counter: int, resume_name: str = "Candidate_Resume") -> str:
+    def generate_job_files(
+        self,
+        job: dict,
+        resume_pdf_path: str,
+        counter: int,
+        resume_name: str = "Candidate_Resume",
+        cover_letter_path: Optional[str] = None,
+    ) -> str:
         """
         为单个岗位生成文件
         
@@ -800,6 +807,7 @@ class OutputGenerator:
         统一前缀: {resume_name}_{Company}_{Title}
         
         - PDF:  {resume_name}_{Company}_{Title}.pdf               (如果重名加编号)
+        - Cover: {resume_name}_{Company}_{Title}_{Score}_cover_letter.txt（若提供源文件）
         - URL:  {resume_name}_{Company}_{Title}_{Score}分.url      (保持排序在一起)
         - Info: {resume_name}_{Company}_{Title}_{Score}分_info.txt (保持排序在一起)
         """
@@ -828,15 +836,16 @@ class OutputGenerator:
         if resume_pdf_path and os.path.exists(resume_pdf_path):
             shutil.copy2(resume_pdf_path, pdf_target)
             log.debug(f"  复制简历: {pdf_target.name}")
+
+        suffix = f"_score_{score}"
+        if cover_letter_path and os.path.isfile(cover_letter_path):
+            cl_target = target_dir / f"{base_name}{suffix}_cover_letter.txt"
+            shutil.copy2(cover_letter_path, cl_target)
+            log.debug(f"  复制求职信: {cl_target.name}")
         
         # 2. 创建 URL 快捷方式
-        # 在 base_name 后面加上分数后缀
-        suffix = f"_score_{score}"
-        
         linkedin_url = job.get('url', f"https://www.linkedin.com/jobs/view/{job.get('job_id')}")
         external_url = job.get('external_apply_url')
-        
-        # 2. 创建 URL 快捷方式
         if job.get('is_easy_apply'):
             # Easy Apply: 直接用 LinkedIn URL
             url_target = target_dir / f"{base_name}{suffix}.url"
@@ -1806,7 +1815,9 @@ class Pipeline:
                     last_err: Optional[Exception] = None
                     for attempt in range(1, max_attempts + 1):
                         try:
-                            resume_pdf_path = self._generate_resume(job, base_resume, base_pdf)
+                            resume_pdf_path, cover_letter_src = self._generate_resume(
+                                job, base_resume, base_pdf
+                            )
                             break
                         except Exception as gen_err:
                             last_err = gen_err
@@ -1825,7 +1836,13 @@ class Pipeline:
                     if resume_pdf_path:
                         # 生成输出文件
                         counter = easy_counter if is_easy else manual_counter
-                        output_path = self.output_gen.generate_job_files(job, resume_pdf_path, counter, resume_name)
+                        output_path = self.output_gen.generate_job_files(
+                            job,
+                            resume_pdf_path,
+                            counter,
+                            resume_name,
+                            cover_letter_path=cover_letter_src,
+                        )
                         
                         if is_easy:
                             easy_counter += 1
@@ -1952,12 +1969,12 @@ class Pipeline:
         except Exception as e:
             log.warning(f"单岗位同步简历路径失败: {e}")
     
-    def _generate_resume(self, job: dict, base_resume: str, base_pdf: str = None) -> str:
-        """生成定制简历
+    def _generate_resume(self, job: dict, base_resume: str, base_pdf: str = None) -> Tuple[str, Optional[str]]:
+        """生成定制简历（及同批求职信文本文件）。
         
         尝试调用 word_editor 生成定制简历。
         若 AI 简历生成失败，则立即抛错，由上层停止整个流程。
-        返回生成的 PDF 或 DOCX 路径。
+        返回 (PDF 或 DOCX 路径, 求职信 .txt 路径或 None)。
         """
         self._last_resume_error_type = None
         self._last_resume_error_message = ""
@@ -1994,9 +2011,15 @@ class Pipeline:
                 title = job.get('title', 'Unknown')
                 safe_company = sanitize_filename(company.split()[0] if company else "Company")
                 safe_title = sanitize_filename(title.split('(')[0].strip())
-                profile_cfg = self.config.get('profile', {})
+                profile_cfg = self.config.get('profile', {}) or {}
                 output_prefix = profile_cfg.get('resume_output_prefix') or profile_cfg.get('first_name') or "Candidate"
                 output_name = f"{output_prefix}_{safe_company}_{safe_title}"
+                applicant_name = (
+                    str(profile_cfg.get("full_name") or "").strip()
+                    or str(profile_cfg.get("first_name") or "").strip()
+                    or None
+                )
+                write_cover_letter = bool(profile_cfg.get("write_cover_letter", True))
                 
                 # 创建输出目录 (使用今日目录下的resumes子目录)
                 resume_output_dir = self.output_gen.today_dir / "resumes"
@@ -2028,7 +2051,9 @@ class Pipeline:
                         model=call_model,
                         skip_pdf=False,
                         verbose=False,
-                        debug=False
+                        debug=False,
+                        applicant_full_name=applicant_name,
+                        write_cover_letter=write_cover_letter,
                     )
 
                 result = _call_word_editor(provider, openai_api_key)
@@ -2036,17 +2061,20 @@ class Pipeline:
                 if result.get('success'):
                     # 保存岗位信息
                     self._save_job_info(resume_output_dir, output_name, job)
+                    cover_path = result.get("cover_letter_path")
+                    if cover_path and not os.path.isfile(cover_path):
+                        cover_path = None
                     
                     # 返回 PDF 路径
                     pdf_path = result.get('pdf_path')
                     if pdf_path and os.path.exists(pdf_path):
-                        return pdf_path
+                        return (pdf_path, cover_path)
                     
                     # 如果没有 PDF，返回 Word 路径
                     word_path = result.get('word_path')
                     if word_path and os.path.exists(word_path):
                         log.warning(f"  word_editor 未返回可用 PDF，回退使用 DOCX: {word_path}")
-                        return word_path
+                        return (word_path, cover_path)
                     err = "word_editor 成功返回，但既没有可用 PDF，也没有可用 DOCX"
                     self._last_resume_error_message = err
                     log.error(f"  {err}")

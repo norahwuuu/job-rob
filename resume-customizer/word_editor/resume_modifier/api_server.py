@@ -235,6 +235,7 @@ def process_resume_task(task_id: str, resume_path: str, job_description: str,
         
         final_word_filename = f"Candidate_Resume_{safe_company}_{safe_job}.docx"
         final_pdf_filename = f"Candidate_Resume_{safe_company}_{safe_job}.pdf"
+        final_cover_filename = f"Candidate_Resume_{safe_company}_{safe_job}_cover_letter.txt"
         
         task_output_dir = Path(output_dir)
         
@@ -256,6 +257,13 @@ def process_resume_task(task_id: str, resume_path: str, job_description: str,
                 old_pdf_path.rename(new_pdf_path)
                 result["pdf_path"] = str(new_pdf_path)
                 pdf_url = f"/api/download/{task_id}/{final_pdf_filename}"
+
+        if result.get("cover_letter_path"):
+            old_cl = Path(result["cover_letter_path"])
+            new_cl = task_output_dir / final_cover_filename
+            if old_cl.exists():
+                old_cl.rename(new_cl)
+                result["cover_letter_path"] = str(new_cl)
         
         # 构建前端可直接展示的响应对象（含每条修改成功/失败）
         modifications = [

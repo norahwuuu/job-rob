@@ -21,6 +21,7 @@ from .content_modifier import ContentModifier, ModificationInstruction
 from .pdf_exporter import PDFExporter
 from .resume_validator import validate_resume_docx
 from .resume_auto_fix import apply_resume_auto_fixes
+from .cover_letter_builder import render_cover_letter
 
 console = Console()
 
@@ -92,7 +93,9 @@ def process_resume(
     model: Optional[str] = None,
     skip_pdf: bool = False,
     verbose: bool = False,
-    debug: bool = False
+    debug: bool = False,
+    applicant_full_name: Optional[str] = None,
+    write_cover_letter: bool = True,
 ) -> dict:
     """
     处理简历的核心函数
@@ -108,9 +111,11 @@ def process_resume(
         skip_pdf: 是否跳过 PDF 生成
         verbose: 是否输出详细信息
         debug: 是否输出调试信息（显示AI返回的target和文档实际内容对比）
+        applicant_full_name: 求职信落款姓名（可选）
+        write_cover_letter: 是否在输出目录写入与 Word 同名的 *_cover_letter.txt
         
     Returns:
-        处理结果字典
+        处理结果字典（含 cover_letter_path）
     """
     # 统一结果结构：CLI 与 API 都复用这个返回体
     result = {
@@ -125,8 +130,10 @@ def process_resume(
         "job_title": "Unknown Position",
         "error": None,
         "validation": None,
+        "cover_letter_path": None,
     }
-    
+    ai_cover_letter_text = ""
+
     try:
         # 1) 解析简历：把 docx 转成结构化文本，供后续 AI 与替换逻辑使用
         if verbose:
@@ -168,6 +175,27 @@ def process_resume(
         result["suggestions"] = analysis.suggestions
         result["company_name"] = analysis.company_name
         result["job_title"] = analysis.job_title
+
+        if write_cover_letter:
+            if verbose:
+                console.print("[blue]Cover letter:[/blue] Generating English letter from JD (150–300 words)...")
+            try:
+                ai_cover_letter_text = analyzer.generate_cover_letter_english(
+                    job_description,
+                    resume_text,
+                    company_name=analysis.company_name,
+                    job_title=analysis.job_title,
+                    job_summary=analysis.job_summary or "",
+                    applicant_full_name=applicant_full_name or "",
+                )
+                if verbose:
+                    wc = AIAnalyzer._english_word_count(ai_cover_letter_text)
+                    console.print(f"  ✓ Draft ~{wc} words")
+            except Exception as cle:
+                ai_cover_letter_text = ""
+                result["cover_letter_ai_error"] = str(cle)
+                if verbose:
+                    console.print(f"  [yellow]⚠ AI cover letter failed, will use template: {cle}[/yellow]")
         
         # 3) 修改文档：将 AI 指令转换为内容修改器需要的指令类型并执行
         if verbose:
@@ -288,6 +316,28 @@ def process_resume(
                 if verbose:
                     console.print(f"  [yellow]⚠ PDF 生成失败: {e}[/yellow]")
                 result["pdf_error"] = str(e)
+
+        if write_cover_letter:
+            try:
+                if (ai_cover_letter_text or "").strip():
+                    cl_text = ai_cover_letter_text.strip()
+                else:
+                    cl_text = render_cover_letter(
+                        result["company_name"],
+                        result["job_title"],
+                        applicant_full_name=applicant_full_name or "",
+                    )
+                if not cl_text.endswith("\n"):
+                    cl_text += "\n"
+                cover_path = word_path.with_name(f"{word_path.stem}_cover_letter.txt")
+                cover_path.write_text(cl_text, encoding="utf-8")
+                result["cover_letter_path"] = str(cover_path)
+                if verbose:
+                    console.print(f"  ✓ Cover letter: {cover_path.name}")
+            except Exception as cle:
+                if verbose:
+                    console.print(f"  [yellow]⚠ Cover letter 写入失败: {cle}[/yellow]")
+                result["cover_letter_error"] = str(cle)
         
         result["success"] = True
         
@@ -419,6 +469,8 @@ def main(resume, job, output, name, api_key, skip_pdf, json_output, verbose, deb
                 table.add_row("Word", result["word_path"])
             if result["pdf_path"]:
                 table.add_row("PDF", result["pdf_path"])
+            if result.get("cover_letter_path"):
+                table.add_row("Cover letter", result["cover_letter_path"])
             
             console.print(table)
             

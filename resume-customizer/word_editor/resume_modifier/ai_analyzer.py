@@ -1003,6 +1003,130 @@ Input:
             self._dump_broken_json_response(raw_text, stage="llm_repair_failed")
             return None
 
+    @staticmethod
+    def _english_word_count(text: str) -> int:
+        """Rough English word count for cover-letter length checks."""
+        if not text or not text.strip():
+            return 0
+        return len(re.findall(r"[A-Za-z][A-Za-z0-9'-]*", text))
+
+    def generate_cover_letter_english(
+        self,
+        job_description: str,
+        resume_text: str,
+        *,
+        company_name: str,
+        job_title: str,
+        job_summary: str = "",
+        applicant_full_name: str = "",
+        jd_max_chars: int = 14000,
+        resume_max_chars: int = 8000,
+        summary_max_chars: int = 2000,
+    ) -> str:
+        """
+        One-shot English cover letter (150–300 words) tailored to JD + resume,
+        including required mobility / work-authorization facts.
+        """
+        cover_system = """You write professional cover letters in English for technical and knowledge-work roles.
+
+Hard requirements:
+1) The full letter MUST be between 150 and 300 words (count every word in the final letter body).
+2) Plain text only. No Markdown, no bullet lists, no subject line. Use normal paragraphs separated by blank lines.
+3) Opening: use "Dear Hiring Manager," unless the provided company name is clearly a real employer name (not "Unknown Company"); in that case you may use "Dear {Company} Team," only when the company name is plausible.
+4) The letter MUST reflect the job description (JD): pick 2–4 concrete themes, requirements, or problems from the posting and connect them to specific experience or skills visible in the resume excerpt. Do not invent degrees, employers, or tools the resume does not support.
+5) You MUST naturally weave in ALL of the following factual statements (one or two sentences, not as a checklist):
+   - The candidate currently splits their time between Switzerland and Germany.
+   - Their German residence authorization is the Opportunity Card (Chancenkarte), which is a national Category D visa that allows employment in Germany, and they are available to start on short notice.
+   - They do not currently hold a Swiss work permit.
+   - They are open to relocation and to fully remote or hybrid arrangements.
+6) If a sign-off name is provided, end with "Sincerely," then a new line with that full name. If no name is provided, end with "Sincerely," only.
+7) Output MUST be a single JSON object with exactly one key: "cover_letter" whose value is the full letter text (use \\n for newlines inside the JSON string)."""
+
+        def _build_user(
+            jd: str,
+            resume: str,
+            company: str,
+            title: str,
+            summary: str,
+            name: str,
+            retry_hint: str = "",
+        ) -> str:
+            name_line = (
+                f"Sign with this full name after Sincerely: {name.strip()}"
+                if (name or "").strip()
+                else "No sign-off name provided — end with Sincerely, only (no name line)."
+            )
+            retry_block = f"\n## Length fix\n{retry_hint}\n" if retry_hint else ""
+            return f"""## Job description
+{jd}
+
+## Resume excerpt (may be truncated)
+{resume}
+
+## Role fields (from analysis; use for addressing and alignment)
+Company name: {company}
+Job title: {title}
+Brief job summary (for alignment, optional): {summary}
+
+## Sign-off
+{name_line}
+{retry_block}
+Return JSON: {{"cover_letter": "<full letter>"}}"""
+
+        jd = (job_description or "")[:jd_max_chars]
+        resume = (resume_text or "")[:resume_max_chars]
+        summary = (job_summary or "")[:summary_max_chars]
+        company = company_name or "Unknown Company"
+        title = job_title or "Unknown Position"
+
+        user_prompt = _build_user(jd, resume, company, title, summary, applicant_full_name)
+        raw = self._call_openai(cover_system, user_prompt)
+        try:
+            data = self._parse_json_safely(raw)
+        except ValueError:
+            repaired = self._repair_json_with_llm(raw)
+            if repaired is None:
+                raise
+            data = repaired
+
+        letter = (data.get("cover_letter") or data.get("coverLetter") or "").strip()
+        if not letter:
+            raise ValueError("AI returned empty cover_letter")
+
+        # Strip accidental fences if the model ignored instructions
+        if letter.startswith("```"):
+            letter = re.sub(r"^```[a-zA-Z]*\s*", "", letter)
+            letter = re.sub(r"\s*```$", "", letter).strip()
+
+        wc = self._english_word_count(letter)
+        if 150 <= wc <= 300:
+            return letter
+
+        retry_hint = (
+            f"Your previous draft was about {wc} words. The letter MUST be between 150 and 300 words total. "
+            f"Rewrite the entire letter: keep all required mobility/visa facts and JD alignment, adjust length only. "
+            f"Previous draft:\n{letter}"
+        )
+        user_retry = _build_user(jd, resume, company, title, summary, applicant_full_name, retry_hint=retry_hint)
+        raw2 = self._call_openai(cover_system, user_retry)
+        try:
+            data2 = self._parse_json_safely(raw2)
+        except ValueError:
+            repaired2 = self._repair_json_with_llm(raw2)
+            data2 = repaired2 or {}
+        letter2 = (data2.get("cover_letter") or data2.get("coverLetter") or "").strip()
+        if letter2.startswith("```"):
+            letter2 = re.sub(r"^```[a-zA-Z]*\s*", "", letter2)
+            letter2 = re.sub(r"\s*```$", "", letter2).strip()
+        if letter2:
+            wc2 = self._english_word_count(letter2)
+            if 150 <= wc2 <= 300:
+                return letter2
+            # Accept retry if closer, else return best effort (still English + JD)
+            if abs(wc2 - 225) < abs(wc - 225):
+                return letter2
+        return letter
+
     def analyze(self, job_description: str, resume_text: str) -> AnalysisResult:
         """
         分析岗位描述和简历，生成修改指令
