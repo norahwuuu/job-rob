@@ -48,7 +48,7 @@
 
 - 主状态文件：`artifacts/jobs_progress.json`
 - 阶段结果：`artifacts/apply_results.json`、`artifacts/logs/*.log`
-- 当日产物：`artifacts/<date>/easy_todo.txt`、`manual_todo.txt`、`job_list.txt`
+- 当日产物：`artifacts/<date>/easy_todo.txt`、`manual_todo.txt`、`summary.json`
 
 > 全流程说明请看仓库根目录 `README.md`。
 

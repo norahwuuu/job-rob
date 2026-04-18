@@ -9,8 +9,8 @@ profile:
   phone_number: ''
   resume_file_prefix: resume
   resume_output_prefix: resume
-  # 与 tailored 简历同批生成英文求职信（.txt），并复制到 easy_apply / manual_apply
-  write_cover_letter: true
+  # true：与 tailored 简历同批生成英文求职信（.txt），并复制到 easy_apply / manual_apply
+  write_cover_letter: false
 ai:
   provider: gemini_relay
   gemini_api_key: ''

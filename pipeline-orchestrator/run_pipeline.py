@@ -782,7 +782,6 @@ class OutputGenerator:
         self.easy_apply_dir = self.today_dir / "easy_apply"
         self.manual_dir = self.today_dir / "manual_apply"
         # Standardized artifact names (snake_case, lowercase)
-        self.job_list_name = "job_list.txt"
         self.easy_todo_name = "easy_todo.txt"
         self.manual_todo_name = "manual_todo.txt"
     
@@ -921,70 +920,111 @@ AI 分析
 """
         with open(path, 'w', encoding='utf-8') as f:
             f.write(content)
-    
-    def generate_summary(self, jobs: List[dict]):
-        """生成汇总文件"""
-        easy_apply_jobs = [j for j in jobs if j.get('is_easy_apply')]
-        manual_jobs = [j for j in jobs if not j.get('is_easy_apply')]
-        
-        # 待申请列表（手动）
-        if manual_jobs:
-            pending_list_path = self.manual_dir / self.manual_todo_name
-            content = f"""待申请岗位 ({len(manual_jobs)}个)
-生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-{'=' * 50}
 
-"""
-            for i, job in enumerate(sorted(manual_jobs, key=lambda x: x.get('ai_score', 0), reverse=True), 1):
-                content += f"□ {i:03d} [{job.get('ai_score', 0):.0f}分] {job.get('company', '')} - {job.get('title', '')}\n"
-                linkedin_url = job.get('url') or (
-                    f"https://www.linkedin.com/jobs/view/{job['job_id']}"
-                    if job.get('job_id') else ""
-                )
-                if linkedin_url:
-                    content += f"    🔗 {linkedin_url}\n"
-                ext_url = job.get('external_apply_url')
-                if ext_url:
-                    content += f"    🌐 官网申请: {ext_url}\n"
-            
-            content += f"""
-{'=' * 50}
-使用方法:
-1. 点击上方 🔗 链接（或双击同目录 xxx.url）打开申请页面
-2. 上传对应的 xxx.pdf 简历
-3. 申请完成后可删除该组文件或运行: python run_pipeline.py done 001
-"""
-            with open(pending_list_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-        
-        # Easy Apply 列表
-        if easy_apply_jobs:
-            easy_list_path = self.easy_apply_dir / "easy_apply_list.txt"
-            content = f"""Easy Apply 岗位 ({len(easy_apply_jobs)}个)
-生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-{'=' * 50}
+    def _find_pdf_for_info_txt(self, folder: Path, info_path: Path) -> str:
+        """根据 *_info.txt 的文件名匹配同目录下对应 PDF（与 generate_job_files 命名规则一致）。"""
+        stem = info_path.stem
+        if not stem.endswith("_info"):
+            return ""
+        core = stem[: -len("_info")]
+        m = re.match(r"^(.+)_score_\d+$", core)
+        if not m:
+            return ""
+        prefix = m.group(1)
+        best: Optional[Path] = None
+        best_mtime = -1.0
+        for p in folder.glob("*.pdf"):
+            if p.stem == prefix or re.match(rf"^{re.escape(prefix)}_\d{{2}}$", p.stem):
+                try:
+                    mt = p.stat().st_mtime
+                except OSError:
+                    continue
+                if mt >= best_mtime:
+                    best_mtime = mt
+                    best = p
+        return str(best.resolve()) if best else ""
 
-"""
-            for i, job in enumerate(sorted(easy_apply_jobs, key=lambda x: x.get('ai_score', 0), reverse=True), 1):
-                content += f"{i:03d} [{job.get('ai_score', 0):.0f}分] {job.get('company', '')} - {job.get('title', '')}\n"
-                linkedin_url = job.get('url') or (
-                    f"https://www.linkedin.com/jobs/view/{job['job_id']}"
-                    if job.get('job_id') else ""
-                )
-                if linkedin_url:
-                    content += f"    🔗 {linkedin_url}\n"
-                ext_url = job.get('external_apply_url')
-                if ext_url:
-                    content += f"    🌐 官网申请: {ext_url}\n"
-            
-            with open(easy_list_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+    def _parse_job_info_txt(self, info_path: Path) -> Optional[dict]:
+        """从 easy_apply / manual_apply 下的 *_info.txt 解析岗位字段。"""
+        try:
+            raw = info_path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+        title = ""
+        company = ""
+        location = ""
+        ai_score = 0.0
+        url = ""
+        ext_url = ""
+        m = re.search(r"📌\s*职位[：:]\s*(.+)", raw)
+        if m:
+            title = m.group(1).strip()
+        m = re.search(r"🏢\s*公司[：:]\s*(.+)", raw)
+        if m:
+            company = m.group(1).strip()
+        m = re.search(r"📍\s*地点[：:]\s*(.+)", raw)
+        if m:
+            location = m.group(1).strip()
+        m = re.search(r"🎯\s*AI评分[：:]\s*([\d.]+)", raw)
+        if m:
+            try:
+                ai_score = float(m.group(1))
+            except ValueError:
+                ai_score = 0.0
+        m = re.search(r"🔗\s*LinkedIn\s*页面[：:]\s*\n\s*(https?://\S+)", raw)
+        if m:
+            url = m.group(1).strip()
+        m = re.search(r"🌐\s*公司官网申请[：:]\s*\n\s*(https?://\S+)", raw)
+        if m:
+            ext_url = m.group(1).strip()
+        jd = ""
+        if "岗位描述" in raw and "AI 分析" in raw:
+            chunk = raw.split("岗位描述", 1)[1]
+            jd = chunk.split("AI 分析", 1)[0][-8000:]
+        folder = info_path.parent
+        resume_path = self._find_pdf_for_info_txt(folder, info_path)
+        return {
+            "job_id": "",
+            "title": title or "Unknown",
+            "company": company or "Unknown",
+            "location": location,
+            "url": url,
+            "external_apply_url": ext_url,
+            "ai_score": ai_score,
+            "job_description": jd,
+            "resume_path": resume_path,
+        }
 
-    def generate_joblist(self, jobs: List[dict], interrupted: bool = False) -> List[Path]:
-        """生成拆分待办清单：easy_todo 和 manual_todo（完成/中断都生成）。"""
-        status_text = "中断" if interrupted else "完成"
-        easy_jobs = [j for j in jobs if j.get('is_easy_apply')]
-        manual_jobs = [j for j in jobs if not j.get('is_easy_apply')]
+    def _collect_visit_list_jobs_from_folder(self, folder: Path) -> List[dict]:
+        """扫描子目录内每个岗位产物（*_info.txt），生成与 processed_jobs 结构兼容的 dict 列表。"""
+        if not folder.is_dir():
+            return []
+        rows: List[dict] = []
+        for info_path in sorted(folder.glob("*_info.txt")):
+            row = self._parse_job_info_txt(info_path)
+            if row:
+                rows.append(row)
+        rows.sort(key=lambda x: float(x.get("ai_score", 0) or 0), reverse=True)
+        return rows
+
+    def generate_joblist(
+        self,
+        jobs: List[dict],
+        interrupted: bool = False,
+        run_status_override: Optional[str] = None,
+        quiet: bool = False,
+    ) -> List[Path]:
+        """根据 easy_apply / manual_apply 目录内已有岗位产物生成根目录访问列表（easy_todo.txt、manual_todo.txt）。
+
+        列表内容以子目录中每个 *_info.txt 为准，与本轮内存中的 jobs 参数无关，便于包含历史已生成文件或中断后已落盘岗位。
+        可在每生成一份简历后调用一次，及时落盘待办列表，避免进程异常退出时丢失记录。
+        """
+        if run_status_override is not None:
+            status_text = run_status_override
+        else:
+            status_text = "中断" if interrupted else "完成"
+        easy_jobs = self._collect_visit_list_jobs_from_folder(self.easy_apply_dir)
+        manual_jobs = self._collect_visit_list_jobs_from_folder(self.manual_dir)
 
         def _build_content(title: str, bucket: List[dict]) -> str:
             def _detect_base_country(job: dict) -> str:
@@ -1043,20 +1083,18 @@ AI 分析
 
         easy_path = self.today_dir / self.easy_todo_name
         manual_path = self.today_dir / self.manual_todo_name
-        list_path = self.today_dir / self.job_list_name
 
         with open(easy_path, 'w', encoding='utf-8') as f:
             f.write(_build_content("Easy Apply Todo", easy_jobs))
         with open(manual_path, 'w', encoding='utf-8') as f:
             f.write(_build_content("Manual Apply Todo", manual_jobs))
 
-        with open(list_path, 'w', encoding='utf-8') as f:
-            f.write(_build_content("Job List", jobs))
-
-        log.info(f"已生成待办清单: {easy_path}")
-        log.info(f"已生成待办清单: {manual_path}")
-        log.info(f"已生成汇总清单: {list_path}")
-        return [easy_path, manual_path, list_path]
+        if not quiet:
+            log.info(f"已生成待办清单: {easy_path}")
+            log.info(f"已生成待办清单: {manual_path}")
+        else:
+            log.debug(f"已刷新待办清单: {easy_path.name}, {manual_path.name}")
+        return [easy_path, manual_path]
 
 
 # ============================================================
@@ -1858,6 +1896,13 @@ class Pipeline:
                         
                         processed_jobs.append(job)
                         log.info(f"  ✓ 已生成")
+                        # 每岗落盘后立即刷新当天根目录 easy_todo / manual_todo（基于 *_info.txt），避免进程中途退出无列表
+                        self.output_gen.generate_joblist(
+                            processed_jobs,
+                            interrupted=False,
+                            run_status_override="进行中（已写入岗位的 PDF/info）",
+                            quiet=True,
+                        )
                     else:
                         raise RuntimeError("AI 简历生成失败：未返回可用简历文件路径")
                         
@@ -1869,8 +1914,7 @@ class Pipeline:
             interrupted = True
             run_error = e
         finally:
-            # 生成汇总与 JobList（即使中断也执行）
-            self.output_gen.generate_summary(processed_jobs)
+            # 根目录 easy_todo.txt / manual_todo.txt（即使中断也执行）
             self.output_gen.generate_joblist(processed_jobs, interrupted=interrupted)
             self.tracker.save()
             

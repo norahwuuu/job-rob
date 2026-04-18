@@ -3,8 +3,8 @@
 Optimize artifacts/ naming layout without breaking runtime compatibility.
 
 What it does:
-1) Ensures canonical todo/list names exist in each date folder.
-2) Moves legacy underscored list files into a legacy_names/ subfolder.
+1) Copy legacy list filenames to canonical names under each date's easy_apply/ and manual_apply/.
+2) Move legacy `_JobList.txt` (if present) to legacy_names/; after canonical copies exist, move legacy easy_apply/manual_apply list files to legacy_names/.
 3) Renames accidental nested artifacts/artifacts folder to artifacts/_legacy_nested_artifacts.
 
 Default is dry-run. Use --apply to execute changes.
@@ -50,19 +50,13 @@ def move_if_exists(src: Path, dst: Path, apply: bool) -> None:
 
 
 def optimize_date_dir(day_dir: Path, apply: bool) -> None:
-    # Canonical files at date root
-    ensure_copy(day_dir / "_JobList.txt", day_dir / "job_list.txt", apply)
-    ensure_copy(day_dir / "easy_todo.txt", day_dir / "easy_todo.txt", apply)
-    ensure_copy(day_dir / "manual_todo.txt", day_dir / "manual_todo.txt", apply)
-
     # Canonical files in subdirs
     ensure_copy(day_dir / "easy_apply" / "_EasyApply列表.txt", day_dir / "easy_apply" / "easy_apply_list.txt", apply)
     ensure_copy(day_dir / "manual_apply" / "_待申请列表.txt", day_dir / "manual_apply" / "manual_todo.txt", apply)
 
     # Move legacy names into legacy_names folder (after canonical copy exists)
     legacy_dir = day_dir / "legacy_names"
-    if (day_dir / "job_list.txt").exists():
-        move_if_exists(day_dir / "_JobList.txt", legacy_dir / "_JobList.txt", apply)
+    move_if_exists(day_dir / "_JobList.txt", legacy_dir / "_JobList.txt", apply)
     if (day_dir / "easy_apply" / "easy_apply_list.txt").exists():
         move_if_exists(day_dir / "easy_apply" / "_EasyApply列表.txt", legacy_dir / "_EasyApply列表.txt", apply)
     if (day_dir / "manual_apply" / "manual_todo.txt").exists():

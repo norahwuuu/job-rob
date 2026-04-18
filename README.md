@@ -56,7 +56,6 @@
 - 当日产物：`artifacts/<date>/`
   - `easy_todo.txt`
   - `manual_todo.txt`
-  - `job_list.txt`
   - `resumes/`
   - `easy_apply/`
   - `manual_apply/`

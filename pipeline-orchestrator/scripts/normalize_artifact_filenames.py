@@ -3,7 +3,6 @@
 Normalize legacy artifact filenames under artifacts/ date folders.
 
 Actions:
-- _JobList.txt -> job_list.txt
 - _EasyApply列表.txt -> easy_apply_list.txt
 - _待申请列表.txt -> manual_todo.txt
 
@@ -15,13 +14,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import shutil
-
-
-RENAMES = [
-    ("_JobList.txt", "job_list.txt"),
-    ("_EasyApply列表.txt", "easy_apply_list.txt"),
-    ("_待申请列表.txt", "manual_todo.txt"),
-]
 
 
 def iter_date_dirs(out_dir: Path) -> list[Path]:
@@ -54,7 +46,6 @@ def main() -> None:
 
     for day_dir in iter_date_dirs(out_dir):
         print(f"\n[{day_dir.name}]")
-        print(copy_if_needed(day_dir / "_JobList.txt", day_dir / "job_list.txt", args.apply))
         print(copy_if_needed(day_dir / "easy_apply" / "_EasyApply列表.txt", day_dir / "easy_apply" / "easy_apply_list.txt", args.apply))
         print(copy_if_needed(day_dir / "manual_apply" / "_待申请列表.txt", day_dir / "manual_apply" / "manual_todo.txt", args.apply))
 
