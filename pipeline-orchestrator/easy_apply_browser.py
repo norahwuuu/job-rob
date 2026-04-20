@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from typing import Any, Optional
 
+from country_contact import contact_by_country
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
@@ -25,10 +26,6 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
 log = logging.getLogger(__name__)
-
-# 与 auto_apply.linkedin_source.contact_by_country("switzerland") 默认一致（todo 缺省时）
-_SWISS_DEFAULT_PHONE = "+41 799067274"
-_SWISS_DEFAULT_ADDRESS = "Unterfuehrungsstrasse 25 4600 Olten"
 
 
 def _resolve_path(p: str, bases: list[Path]) -> Optional[Path]:
@@ -332,7 +329,7 @@ class EasyApplyAutomation:
             if job_id and job_id not in self._no_easy_apply_set:
                 self._no_easy_apply_set.add(job_id)
                 self.no_easy_apply_job_ids.append(job_id)
-            log.warning("未找到可点击的 Easy Apply 按钮，按已投递处理: job_id=%s", job_id)
+            log.warning("未找到可点击的 Easy Apply 按钮，跳过且不改状态: job_id=%s", job_id)
             self._close_tab_if_opened_for_this_job(open_in_new_tab)
             return False
 
@@ -741,8 +738,9 @@ class EasyApplyAutomation:
         addr_val = str(answers.get("full_address_line") or job_row.get("contact_address") or "")
         country_val = (str(answers.get("country") or "").strip() or str(job_row.get("base_country") or "").strip())
         if bc_row == "switzerland":
-            phone_val = str(job_row.get("contact_phone") or "").strip() or _SWISS_DEFAULT_PHONE
-            addr_val = str(job_row.get("contact_address") or "").strip() or _SWISS_DEFAULT_ADDRESS
+            phone_sw, addr_sw = contact_by_country("switzerland")
+            phone_val = str(job_row.get("contact_phone") or "").strip() or phone_sw
+            addr_val = str(job_row.get("contact_address") or "").strip() or addr_sw
             country_val = "Switzerland"
         return {
             "email": str(answers.get("email") or ""),

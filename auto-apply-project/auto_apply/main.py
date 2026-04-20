@@ -34,6 +34,15 @@ def cmd_report(args: argparse.Namespace) -> None:
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
+def _run_easy_jobs(jobs: list[Job], args: argparse.Namespace) -> None:
+    if args.max is not None:
+        jobs = jobs[: args.max]
+    use_ai_fill: bool | None = False if getattr(args, "no_ai", False) else None
+    engine = AutoApplyEngine(load_profile(use_ai_fill=use_ai_fill), Path(args.data_dir))
+    result = engine.run_easy_apply_only(jobs)
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+
+
 def cmd_run_easy(args: argparse.Namespace) -> None:
     items = load_jobs_progress(Path(args.jobs_progress))
     jobs = extract_easy_apply_candidates(items)
@@ -42,13 +51,7 @@ def cmd_run_easy(args: argparse.Namespace) -> None:
         job for job in jobs
         if job.source_status == "resume_ready" and bool(job.resume_path)
     ]
-    if args.max is not None:
-        jobs = jobs[: args.max]
-
-    use_ai_fill: bool | None = False if getattr(args, "no_ai", False) else None
-    engine = AutoApplyEngine(load_profile(use_ai_fill=use_ai_fill), Path(args.data_dir))
-    result = engine.run_easy_apply_only(jobs)
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    _run_easy_jobs(jobs, args)
 
 
 def cmd_run_easy_todo(args: argparse.Namespace) -> None:
@@ -64,12 +67,7 @@ def cmd_run_easy_todo(args: argparse.Namespace) -> None:
     if args.jobs_progress:
         applied_ids = load_applied_job_ids(Path(args.jobs_progress))
         jobs = [job for job in jobs if str(job.job_id) not in applied_ids]
-    if args.max is not None:
-        jobs = jobs[: args.max]
-    use_ai_fill: bool | None = False if getattr(args, "no_ai", False) else None
-    engine = AutoApplyEngine(load_profile(use_ai_fill=use_ai_fill), Path(args.data_dir))
-    result = engine.run_easy_apply_only(jobs)
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    _run_easy_jobs(jobs, args)
 
 
 def build_parser() -> argparse.ArgumentParser:

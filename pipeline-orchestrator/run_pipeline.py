@@ -30,6 +30,8 @@ from typing import List, Dict, Any, Optional, Tuple
 import subprocess
 from urllib.parse import urlparse, urlunparse
 
+from country_contact import detect_base_country_from_text
+
 # ============================================================
 # 日志配置
 # ============================================================
@@ -1044,31 +1046,6 @@ AI 分析
                 jobs_by_title_company[f"{tk[0]}|||{tk[1]}"] = st
 
         def _build_content(title: str, bucket: List[dict]) -> str:
-            def _detect_base_country(job: dict) -> str:
-                text = " ".join([
-                    str(job.get("location", "")),
-                    str(job.get("title", "")),
-                    str(job.get("company", "")),
-                    str(job.get("job_description", ""))[:800],
-                ]).lower()
-                swiss_tokens = [
-                    "switzerland",
-                    "schweiz",
-                    "zurich",
-                    "zuerich",
-                    "zürich",
-                    "geneva",
-                    "basel",
-                    "olten",
-                    "bern",
-                    "lausanne",
-                    "lugano",
-                    "winterthur",
-                ]
-                if any(token in text for token in swiss_tokens):
-                    return "switzerland"
-                return "germany"
-
             def _normalize_resume_path(resume_path: str) -> str:
                 if not resume_path:
                     return ""
@@ -1120,7 +1097,14 @@ AI 分析
                 )
                 resume_path = job.get('resume_path', '')
                 resume_abs = _normalize_resume_path(str(resume_path))
-                base_country = _detect_base_country(job)
+                base_country = detect_base_country_from_text(
+                    [
+                        job.get("location", ""),
+                        job.get("title", ""),
+                        job.get("company", ""),
+                        str(job.get("job_description", ""))[:800],
+                    ]
+                )
                 status_val = _resolve_status(job)
                 content += f"{i:03d}. {job_title} @ {company}\n"
                 content += f"    Status: {status_val}\n"
@@ -2472,24 +2456,14 @@ AI Reason: {job.get('ai_reason', '')}
                 ]
 
             if closed_job_ids:
-                self._sync_closed_status_to_progress(closed_job_ids)
-                log.info(f"已标记 {len(closed_job_ids)} 个岗位为 closed（不再接受申请）")
-                status_changed = True
+                log.info(f"检测到 {len(closed_job_ids)} 个岗位为 closed（不再接受申请）")
             if no_easy_apply_ids:
-                # 该类岗位通常已存在 Applied 态，不再出现 Easy Apply 入口，按已投递落库。
-                self._sync_apply_results(
-                    [{"job_id": jid, "success": True} for jid in no_easy_apply_ids]
-                )
-                self._sync_apply_status_to_progress(no_easy_apply_ids)
-                log.info(f"已将 {len(no_easy_apply_ids)} 个未找到 Easy Apply 的岗位标记为已投递")
-                status_changed = True
+                log.info(f"检测到 {len(no_easy_apply_ids)} 个岗位未找到 Easy Apply（不改状态）")
 
             if applied_job_ids and browser_sync_applied:
                 self._sync_apply_results(
                     [{"job_id": jid, "success": True} for jid in applied_job_ids]
                 )
-                self._sync_apply_status_to_progress(applied_job_ids)
-                status_changed = True
                 log.info(
                     f"\n申请完成：已标记为已投递 {len(applied_job_ids)} 个"
                     f"（本轮准备 {len(auto_applied)} 个）"
@@ -2509,11 +2483,12 @@ AI Reason: {job.get('ai_reason', '')}
             elif not auto_applied:
                 log.info("本轮 auto_applied 为空，未更新 jobs_progress")
             # 末尾兜底：按本轮结果再统一同步一次 jobs_progress，避免中间分支遗漏。
-            self._final_sync_status_to_progress(
+            final_synced = self._final_sync_status_to_progress(
                 applied_job_ids=applied_job_ids if browser_sync_applied else [],
-                no_easy_apply_ids=no_easy_apply_ids,
                 closed_job_ids=closed_job_ids,
             )
+            if final_synced > 0:
+                status_changed = True
             if status_changed:
                 # 状态变化后按“当前执行的 easy_todo 所在目录”刷新，确保遍历中的当日清单及时更新。
                 latest_jobs = self._load_jobs_progress()
@@ -2536,52 +2511,6 @@ AI Reason: {job.get('ai_reason', '')}
             else:
                 # 标记失败，可以后续重试
                 self.tracker.update_status(job_id, STATUS_FAILED)
-
-    def _sync_apply_status_to_progress(self, applied_job_ids: List[str]):
-        """将自动投递成功结果回写到统一 jobs_progress.json（status=applied）。"""
-        if not applied_job_ids:
-            return
-        jobs_file = self._artifact_paths()["job_registry"]
-        if not jobs_file.exists():
-            return
-        try:
-            with open(jobs_file, "r", encoding="utf-8") as f:
-                jobs = json.load(f) or []
-            updated = 0
-            applied_set = {str(i) for i in applied_job_ids}
-            for row in jobs:
-                if str(row.get("job_id")) in applied_set:
-                    row["status"] = STATUS_APPLIED
-                    updated += 1
-            if updated:
-                with open(jobs_file, "w", encoding="utf-8") as f:
-                    json.dump(jobs, f, ensure_ascii=False, indent=2)
-                log.info(f"✓ 已回写 {updated} 个岗位状态到 jobs_progress.json")
-        except Exception as e:
-            log.warning(f"回写 jobs_progress 申请状态失败: {e}")
-
-    def _sync_closed_status_to_progress(self, closed_job_ids: List[str]):
-        """将已检测为不再接受申请的岗位回写为 closed。"""
-        if not closed_job_ids:
-            return
-        jobs_file = self._artifact_paths()["job_registry"]
-        if not jobs_file.exists():
-            return
-        try:
-            with open(jobs_file, "r", encoding="utf-8") as f:
-                jobs = json.load(f) or []
-            updated = 0
-            closed_set = {str(i) for i in closed_job_ids if str(i)}
-            for row in jobs:
-                if str(row.get("job_id")) in closed_set:
-                    row["status"] = STATUS_CLOSED
-                    updated += 1
-            if updated:
-                with open(jobs_file, "w", encoding="utf-8") as f:
-                    json.dump(jobs, f, ensure_ascii=False, indent=2)
-                log.info(f"✓ 已回写 {updated} 个岗位状态到 jobs_progress.json（closed）")
-        except Exception as e:
-            log.warning(f"回写 jobs_progress 关闭状态失败: {e}")
 
     def _refresh_todo_for_easy_todo_file(self, easy_todo_file: Path, jobs: List[dict]) -> None:
         """按当前执行的 easy_todo 所在日期目录刷新清单，避免固定刷新到当天目录。"""
@@ -2607,17 +2536,16 @@ AI Reason: {job.get('ai_reason', '')}
         self,
         *,
         applied_job_ids: List[str],
-        no_easy_apply_ids: List[str],
         closed_job_ids: List[str],
-    ) -> None:
+    ) -> int:
         """末尾兜底同步：统一回写 applied/closed 到 jobs_progress。closed 优先级高于 applied。"""
         jobs_file = self._artifact_paths()["job_registry"]
         if not jobs_file.exists():
-            return
-        applied_set = {str(i) for i in (applied_job_ids + no_easy_apply_ids) if str(i)}
+            return 0
+        applied_set = {str(i) for i in applied_job_ids if str(i)}
         closed_set = {str(i) for i in closed_job_ids if str(i)}
         if not applied_set and not closed_set:
-            return
+            return 0
         try:
             with open(jobs_file, "r", encoding="utf-8") as f:
                 jobs = json.load(f) or []
@@ -2637,8 +2565,10 @@ AI Reason: {job.get('ai_reason', '')}
                 with open(jobs_file, "w", encoding="utf-8") as f:
                     json.dump(jobs, f, ensure_ascii=False, indent=2)
                 log.info(f"✓ 末尾同步 jobs_progress: applied={len(applied_set)} closed={len(closed_set)}")
+            return updated
         except Exception as e:
             log.warning(f"末尾同步 jobs_progress 失败: {e}")
+            return 0
 
     def generate_daily_summary(self):
         """生成当日 summary.json，便于快速复盘。"""

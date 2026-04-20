@@ -95,28 +95,33 @@ def parse_easy_todo(path: Path) -> list[Job]:
     base_prefix = "Base Country:"
     status_prefix = "Status:"
 
+    def flush_current() -> None:
+        nonlocal current_title, current_company, current_url, current_pdf, current_base_country, current_status
+        if not current_url or not current_pdf:
+            return
+        base_country = (current_base_country or detect_base_country(f"{current_title} {current_company}")).lower()
+        phone, address = contact_by_country(base_country)
+        jobs.append(
+            Job(
+                job_id=current_url.rstrip("/").split("/")[-1],
+                title=current_title,
+                company=current_company,
+                url=current_url,
+                easy_apply=True,
+                is_easy_apply=True,
+                source_status=(current_status or "resume_ready"),
+                resume_path=current_pdf,
+                base_country=base_country,
+                contact_phone=phone,
+                contact_address=address,
+            )
+        )
+
     for raw_line in lines:
         line = raw_line.strip()
         title_match = title_pattern.match(line)
         if title_match:
-            if current_url and current_pdf:
-                base_country = (current_base_country or detect_base_country(f"{current_title} {current_company}")).lower()
-                phone, address = contact_by_country(base_country)
-                jobs.append(
-                    Job(
-                        job_id=current_url.rstrip("/").split("/")[-1],
-                        title=current_title,
-                        company=current_company,
-                        url=current_url,
-                        easy_apply=True,
-                        is_easy_apply=True,
-                        source_status=(current_status or "resume_ready"),
-                        resume_path=current_pdf,
-                        base_country=base_country,
-                        contact_phone=phone,
-                        contact_address=address,
-                    )
-                )
+            flush_current()
             current_title = title_match.group(1).strip()
             current_company = title_match.group(2).strip()
             current_url = ""
@@ -138,23 +143,6 @@ def parse_easy_todo(path: Path) -> list[Job]:
             current_status = line[len(status_prefix):].strip().lower()
             continue
 
-    if current_url and current_pdf:
-        base_country = (current_base_country or detect_base_country(f"{current_title} {current_company}")).lower()
-        phone, address = contact_by_country(base_country)
-        jobs.append(
-            Job(
-                job_id=current_url.rstrip("/").split("/")[-1],
-                title=current_title,
-                company=current_company,
-                url=current_url,
-                easy_apply=True,
-                is_easy_apply=True,
-                source_status=(current_status or "resume_ready"),
-                resume_path=current_pdf,
-                base_country=base_country,
-                contact_phone=phone,
-                contact_address=address,
-            )
-        )
+    flush_current()
 
     return jobs
