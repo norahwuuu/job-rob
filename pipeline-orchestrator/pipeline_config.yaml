@@ -82,8 +82,8 @@ advanced:
   easy_apply_browser: true
   # true：只自动填表并走到「提交申请」前一步，不点击提交；多标签保留页面，便于人工核对后提交
   easy_apply_fill_only: true
-  # 每个岗位处理完后的间隔秒数（填表-only 默认 60，便于逐个检查）
-  easy_apply_job_pause_s: 60
+  # 每个岗位处理完后的间隔秒数（0=不等待，立即打开下一页/标签）
+  easy_apply_job_pause_s: 0
   # true：除第一个岗位外，每个岗位在新标签打开（与 fill_only 搭配，保留所有 JD 页）
   easy_apply_new_tab_per_job: true
   # true：流程结束后不关闭浏览器（fill_only 时默认等价 true，便于手动提交）

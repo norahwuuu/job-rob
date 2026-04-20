@@ -53,6 +53,11 @@ def cmd_run_easy(args: argparse.Namespace) -> None:
 
 def cmd_run_easy_todo(args: argparse.Namespace) -> None:
     jobs = parse_easy_todo(Path(args.easy_todo))
+    # 仅处理 resume_ready，避免非待投递状态占用配额（--max）。
+    jobs = [
+        job for job in jobs
+        if str(job.source_status or "").strip().lower() == "resume_ready" and bool(job.resume_path)
+    ]
     if args.job_id:
         target_id = str(args.job_id).strip()
         jobs = [job for job in jobs if str(job.job_id) == target_id]

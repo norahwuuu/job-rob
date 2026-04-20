@@ -87,11 +87,13 @@ def parse_easy_todo(path: Path) -> list[Job]:
     current_url = ""
     current_pdf = ""
     current_base_country = ""
+    current_status = ""
 
     title_pattern = re.compile(r"^\d+\.\s+(.*?)\s+@\s+(.*?)$")
     url_prefix = "Job Link:"
     pdf_prefix = "PDF Path:"
     base_prefix = "Base Country:"
+    status_prefix = "Status:"
 
     for raw_line in lines:
         line = raw_line.strip()
@@ -108,7 +110,7 @@ def parse_easy_todo(path: Path) -> list[Job]:
                         url=current_url,
                         easy_apply=True,
                         is_easy_apply=True,
-                        source_status="resume_ready",
+                        source_status=(current_status or "resume_ready"),
                         resume_path=current_pdf,
                         base_country=base_country,
                         contact_phone=phone,
@@ -120,6 +122,7 @@ def parse_easy_todo(path: Path) -> list[Job]:
             current_url = ""
             current_pdf = ""
             current_base_country = ""
+            current_status = ""
             continue
 
         if line.startswith(url_prefix):
@@ -130,6 +133,9 @@ def parse_easy_todo(path: Path) -> list[Job]:
             continue
         if line.startswith(base_prefix):
             current_base_country = line[len(base_prefix):].strip().lower()
+            continue
+        if line.startswith(status_prefix):
+            current_status = line[len(status_prefix):].strip().lower()
             continue
 
     if current_url and current_pdf:
@@ -143,7 +149,7 @@ def parse_easy_todo(path: Path) -> list[Job]:
                 url=current_url,
                 easy_apply=True,
                 is_easy_apply=True,
-                source_status="resume_ready",
+                source_status=(current_status or "resume_ready"),
                 resume_path=current_pdf,
                 base_country=base_country,
                 contact_phone=phone,

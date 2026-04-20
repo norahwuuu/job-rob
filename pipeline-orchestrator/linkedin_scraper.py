@@ -225,6 +225,8 @@ class LinkedInScraper:
         self.username = username
         self.password = password
         self.headless = headless
+        # True 时启用 Chrome detach：Python 进程退出后窗口仍保留（仅 GUI 模式有效）。
+        self.detach_on_exit = False
         self.cookies_path = cookies_path
         self.browser = None
         self.wait = None
@@ -352,6 +354,8 @@ class LinkedInScraper:
             options.add_argument("--window-size=1920,1080")
         else:
             options.add_argument("--start-maximized")
+            if self.detach_on_exit:
+                options.add_experimental_option("detach", True)
         
         return options
     

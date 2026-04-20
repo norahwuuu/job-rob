@@ -255,6 +255,10 @@ class EasyApplyAutomation:
     def __init__(self, driver: WebDriver, default_wait_s: int = 22) -> None:
         self.driver = driver
         self.default_wait_s = default_wait_s
+        self.closed_job_ids: list[str] = []
+        self._closed_job_set: set[str] = set()
+        self.no_easy_apply_job_ids: list[str] = []
+        self._no_easy_apply_set: set[str] = set()
 
     def _wait(self, seconds: Optional[float] = None) -> WebDriverWait:
         return WebDriverWait(self.driver, int(seconds or self.default_wait_s))
@@ -325,7 +329,11 @@ class EasyApplyAutomation:
             )
             time.sleep(1.0)
         if not clicked:
-            log.error("未找到可点击的 Easy Apply 按钮: job_id=%s", job_id)
+            if job_id and job_id not in self._no_easy_apply_set:
+                self._no_easy_apply_set.add(job_id)
+                self.no_easy_apply_job_ids.append(job_id)
+            log.warning("未找到可点击的 Easy Apply 按钮，按已投递处理: job_id=%s", job_id)
+            self._close_tab_if_opened_for_this_job(open_in_new_tab)
             return False
 
         time.sleep(0.6)
@@ -475,6 +483,9 @@ class EasyApplyAutomation:
         """若岗位已关闭：打日志、关标签（若适用）、返回 True 表示应结束本岗位。"""
         if not self._job_no_longer_accepting_applications():
             return False
+        if job_id and job_id not in self._closed_job_set:
+            self._closed_job_set.add(job_id)
+            self.closed_job_ids.append(job_id)
         log.warning(
             "职位已不再接受申请（%s），跳过 Easy Apply: job_id=%s",
             phase,
@@ -484,20 +495,29 @@ class EasyApplyAutomation:
         return True
 
     def _close_tab_if_opened_for_this_job(self, open_in_new_tab: bool) -> None:
-        """本岗位若是新标签打开的，则关掉当前标签并切回剩余窗口，避免堆积无效页。"""
-        if not open_in_new_tab:
-            return
+        """关掉当前岗位页；若仅剩单标签无法关闭，则跳到空白页避免停留在关岗职位。"""
         try:
-            if len(self.driver.window_handles) > 1:
-                self.driver.close()
-                if self.driver.window_handles:
-                    self.driver.switch_to.window(self.driver.window_handles[-1])
+            handles = self.driver.window_handles
         except Exception:
+            handles = []
+        # 多标签时始终关闭当前岗位页（不要求必须由本函数新开），避免卡着关岗页。
+        if len(handles) > 1:
             try:
-                if self.driver.window_handles:
-                    self.driver.switch_to.window(self.driver.window_handles[0])
+                self.driver.close()
             except Exception:
                 pass
+            try:
+                rest = self.driver.window_handles
+                if rest:
+                    self.driver.switch_to.window(rest[-1])
+            except Exception:
+                pass
+            return
+        # 单标签无法 close：切离岗位详情页，避免看起来“没关闭”。
+        try:
+            self.driver.get("about:blank")
+        except Exception:
+            pass
 
     def _find_easy_apply_apply_href(self) -> Optional[str]:
         """站内 Easy Apply 的 <a href>（含 openSDUIApplyFlow 或 /jobs/view/.../apply/）。"""
@@ -1012,14 +1032,15 @@ def run_prepared_jobs(
     *,
     submit_application: bool = True,
     new_tab_per_job: bool = False,
-) -> list[str]:
+) -> tuple[list[str], list[str], list[str]]:
     """
     对 auto_applied 风格的记录依次执行 Easy Apply。
 
     submit_application=False：填完向导至「提交申请」前即停，不点提交。
     new_tab_per_job=True：除第一个岗位外，每个岗位在新浏览器标签打开，便于保留多页手动提交。
 
-    返回本流程成功完成的 job_id 列表（填表-only 成功也算成功，但不会代表已在 LinkedIn 提交）。
+    返回 (成功完成 job_id 列表, 已检测为 closed 的 job_id 列表, 未找到 Easy Apply 按已投递处理的 job_id 列表)。
+    填表-only 成功也算成功，但不会代表已在 LinkedIn 提交。
     """
     auto = EasyApplyAutomation(driver)
     ok: list[str] = []
@@ -1039,6 +1060,6 @@ def run_prepared_jobs(
                 ok.append(jid)
         except Exception as e:
             log.exception("Easy Apply 异常 job_id=%s: %s", jid, e)
-        if i < n - 1:
+        if i < n - 1 and pause_between_jobs_s > 0:
             time.sleep(pause_between_jobs_s)
-    return ok
+    return ok, auto.closed_job_ids, auto.no_easy_apply_job_ids
