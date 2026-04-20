@@ -1,13 +1,16 @@
 """
-LinkedIn Easy Apply 浏览器自动化：打开职位页、点击 Easy Apply、在向导中填写并提交。
+LinkedIn Easy Apply 浏览器自动化：打开职位页、点击 Easy Apply、在向导中填写；
+可选仅填表不提交（保留在提交前一步，多标签页并排，便于手动点 Submit）。
 
 依赖与 linkedin_scraper 相同的 Selenium 环境；选择器随 LinkedIn 改版可能需调整。
 """
 from __future__ import annotations
 
 import logging
+import re
 import time
 from pathlib import Path
+from urllib.parse import urljoin
 from typing import Any, Optional
 
 from selenium.common.exceptions import (
@@ -22,6 +25,10 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
 log = logging.getLogger(__name__)
+
+# 与 auto_apply.linkedin_source.contact_by_country("switzerland") 默认一致（todo 缺省时）
+_SWISS_DEFAULT_PHONE = "+41 799067274"
+_SWISS_DEFAULT_ADDRESS = "Unterfuehrungsstrasse 25 4600 Olten"
 
 
 def _resolve_path(p: str, bases: list[Path]) -> Optional[Path]:
@@ -47,25 +54,204 @@ def _safe_click(driver: WebDriver, el) -> None:
         el.click()
 
 
+def _modal_rect_substantial(el) -> bool:
+    """排除占位/零尺寸的「假」节点。"""
+    try:
+        r = el.rect
+        return int(r.get("width", 0) or 0) >= 120 and int(r.get("height", 0) or 0) >= 80
+    except Exception:
+        return True
+
+
+def _modal_contains_easy_apply_markers(container) -> bool:
+    """在泛型 dialog / artdeco-modal 上判断是否像 Easy Apply 向导（避免点到其它弹窗）。"""
+    try:
+        cls = (container.get_attribute("class") or "").lower()
+        if "jobs-easy-apply" in cls or "easy-apply" in cls:
+            return True
+    except Exception:
+        return False
+    markers = (
+        "input[type='file']",
+        ".jobs-easy-apply-footer",
+        "footer.jobs-easy-apply-footer",
+        ".jobs-easy-apply-footer__info",
+        ".fb-dash-form-element",
+        "[data-test-form-element]",
+        "button[data-easy-apply-next-button]",
+        "[class*='jobs-easy-apply-form']",
+        ".jobs-easy-apply-form-section",
+        "#jobs-apply-header",
+    )
+    for sel in markers:
+        try:
+            if container.find_elements(By.CSS_SELECTOR, sel):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _modal_root(driver: WebDriver):
-    selectors = [
+    """
+    LinkedIn 改版后弹层可能仍是 artdeco-modal，但不再带 jobs-easy-apply-modal 等旧 class；
+    仅用 role=dialog 又会误中其它弹窗。这里先精确、再按「申请表单特征」在泛型 modal 里挑最大可见层。
+    """
+    specific_selectors = [
+        # 与当前 prod DOM 一致：外层 dialog + jobs-easy-apply-modal
+        "div.artdeco-modal.jobs-easy-apply-modal[role='dialog']",
+        "div.jobs-easy-apply-modal[role='dialog']",
         "div.jobs-easy-apply-modal__content",
         "div[data-test-modal-container]",
         "div.artdeco-modal.jobs-easy-apply-modal",
-        "div[role='dialog']",
+        ".jobs-easy-apply-modal div.artdeco-modal__content",
+        "div.jobs-easy-apply-modal__form",
+        "[class*='jobs-easy-apply-modal'] div.artdeco-modal__content",
     ]
-    for sel in selectors:
+    for sel in specific_selectors:
         try:
-            els = driver.find_elements(By.CSS_SELECTOR, sel)
-            for e in els:
-                if e.is_displayed():
-                    return e
+            for e in driver.find_elements(By.CSS_SELECTOR, sel):
+                try:
+                    if e.is_displayed() and _modal_rect_substantial(e):
+                        return e
+                except StaleElementReferenceException:
+                    continue
         except Exception:
             continue
+
+    broad_selectors = (
+        "div[role='dialog']",
+        "aside[role='dialog']",
+        "dialog[open]",
+        "dialog",
+        "div.artdeco-modal",
+        "div[data-test-modal]",
+        "[aria-modal='true']",
+    )
+    best = None
+    best_area = 0
+    for sel in broad_selectors:
+        try:
+            for e in driver.find_elements(By.CSS_SELECTOR, sel):
+                try:
+                    if not e.is_displayed() or not _modal_rect_substantial(e):
+                        continue
+                    if not _modal_contains_easy_apply_markers(e):
+                        continue
+                    r = e.rect
+                    area = int(r.get("width", 0) or 0) * int(r.get("height", 0) or 0)
+                    if area >= best_area:
+                        best = e
+                        best_area = area
+                except StaleElementReferenceException:
+                    continue
+        except Exception:
+            continue
+    if best is not None:
+        return best
+
+    try:
+        for e in driver.find_elements(By.CSS_SELECTOR, "[class*='jobs-easy-apply']"):
+            try:
+                if e.is_displayed() and _modal_rect_substantial(e):
+                    return e
+            except StaleElementReferenceException:
+                continue
+    except Exception:
+        pass
+
     return None
 
 
+def _page_is_apply_route(driver: WebDriver) -> bool:
+    u = (driver.current_url or "").lower()
+    if "linkedin.com" not in u:
+        return False
+    return "/apply/" in u or "opensduiapplyflow" in u
+
+
+def _page_apply_shell(driver: WebDriver):
+    """
+    点击带 openSDUIApplyFlow 的链接后，常整页进入 .../jobs/view/<id>/apply/...，
+    此时 DOM 里可能没有 role=dialog / .artdeco-modal，只在 main 里画申请表。
+    """
+    for sel in (
+        "div.jobs-easy-apply-modal__content",
+        ".jobs-apply-form",
+        "main",
+        "[role='main']",
+    ):
+        for e in driver.find_elements(By.CSS_SELECTOR, sel):
+            try:
+                if not e.is_displayed():
+                    continue
+                if _modal_contains_easy_apply_markers(e):
+                    return e
+                if e.find_elements(By.CSS_SELECTOR, "#jobs-apply-header") or e.find_elements(
+                    By.CSS_SELECTOR, "button[data-easy-apply-next-button]"
+                ):
+                    return e
+            except Exception:
+                continue
+    return None
+
+
+def _inline_apply_shell(driver: WebDriver):
+    """同一职位 URL 下内联渲染的向导（无弹层、无 /apply/ 路由）。"""
+    try:
+        has_hdr = any(
+            e.is_displayed()
+            for e in driver.find_elements(By.CSS_SELECTOR, "#jobs-apply-header, h2#jobs-apply-header")
+        )
+        has_next = any(
+            e.is_displayed()
+            for e in driver.find_elements(By.CSS_SELECTOR, "button[data-easy-apply-next-button]")
+        )
+        if not (has_hdr or has_next):
+            return None
+        for sel in ("div.jobs-easy-apply-modal__content", "main", "[role='main']"):
+            for e in driver.find_elements(By.CSS_SELECTOR, sel):
+                try:
+                    if e.is_displayed() and _modal_contains_easy_apply_markers(e):
+                        return e
+                except Exception:
+                    continue
+        for m in driver.find_elements(By.CSS_SELECTOR, "main, [role='main']"):
+            try:
+                if not m.is_displayed():
+                    continue
+                if m.find_elements(By.CSS_SELECTOR, ".fb-dash-form-element, [data-test-form-element]"):
+                    return m
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
+
+
+def _apply_wizard_root(driver: WebDriver):
+    """弹层 modal 或整页 /apply/ 或内联向导，统一取填表根节点。"""
+    r = _modal_root(driver)
+    if r is not None:
+        return r
+    if _page_is_apply_route(driver):
+        r = _page_apply_shell(driver)
+        if r is not None:
+            return r
+    return _inline_apply_shell(driver)
+
+
 class EasyApplyAutomation:
+    _CLOSED_JOB_MARKERS = (
+        "no longer accepting applications",
+        "is no longer accepting applications",
+        "no longer accepting",
+        "this job is closed",
+        "job is closed",
+        "bewerbungen werden nicht mehr angenommen",
+        "nimmt keine bewerbungen mehr",
+    )
+
     def __init__(self, driver: WebDriver, default_wait_s: int = 22) -> None:
         self.driver = driver
         self.default_wait_s = default_wait_s
@@ -73,8 +259,15 @@ class EasyApplyAutomation:
     def _wait(self, seconds: Optional[float] = None) -> WebDriverWait:
         return WebDriverWait(self.driver, int(seconds or self.default_wait_s))
 
-    def apply_one(self, job_row: dict[str, Any], artifacts_base: Path) -> bool:
-        """打开 job_row['url']，完成一次 Easy Apply。成功返回 True。"""
+    def apply_one(
+        self,
+        job_row: dict[str, Any],
+        artifacts_base: Path,
+        *,
+        submit_application: bool = True,
+        open_in_new_tab: bool = False,
+    ) -> bool:
+        """打开 job_row['url']，走 Easy Apply 向导填表；submit_application=False 时在提交前停住并成功返回。"""
         url = (job_row.get("url") or "").strip()
         job_id = str(job_row.get("job_id") or "")
         if not url:
@@ -103,23 +296,74 @@ class EasyApplyAutomation:
                     answers = bundle["answers"]
 
         log.info("Easy Apply 浏览器: 打开 %s", url[:80])
-        self.driver.get(url)
-        time.sleep(2.5)
+        if open_in_new_tab:
+            self.driver.execute_script("window.open(arguments[0], '_blank');", url)
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+        else:
+            self.driver.get(url)
+        time.sleep(0.45)
+        if self._handle_closed_job_if_any(job_id, open_in_new_tab, "打开页面后"):
+            return False
+        time.sleep(0.75)
+        if self._handle_closed_job_if_any(job_id, open_in_new_tab, "等待前"):
+            return False
+        self._wait_for_job_apply_area()
 
-        if not self._click_easy_apply_button():
+        if self._handle_closed_job_if_any(job_id, open_in_new_tab, "职位区加载后"):
+            return False
+
+        clicked = False
+        for attempt in range(3):
+            if self._handle_closed_job_if_any(job_id, open_in_new_tab, f"第 {attempt + 1}/3 次点 Easy Apply 前"):
+                return False
+            if self._click_easy_apply_button():
+                clicked = True
+                break
+            log.warning(
+                "未找到 Easy Apply（第 %s/3 次），1s 后重试（页面可能仍在渲染）",
+                attempt + 1,
+            )
+            time.sleep(1.0)
+        if not clicked:
             log.error("未找到可点击的 Easy Apply 按钮: job_id=%s", job_id)
             return False
 
-        time.sleep(1.5)
-        try:
-            self._wait(25).until(lambda d: _modal_root(d) is not None)
-        except TimeoutException:
-            log.error("Easy Apply 弹窗未出现: job_id=%s", job_id)
+        time.sleep(0.6)
+        ready, closed = self._wait_for_apply_wizard_ready(job_id, open_in_new_tab)
+        if closed:
+            return False
+        if not ready:
+            try:
+                cur = self.driver.current_url
+                nd = len(self.driver.find_elements(By.CSS_SELECTOR, "[role='dialog']"))
+                nm = len(self.driver.find_elements(By.CSS_SELECTOR, ".artdeco-modal"))
+                nf = len(self.driver.find_elements(By.CSS_SELECTOR, "input[type='file']"))
+                nfe = len(self.driver.find_elements(By.CSS_SELECTOR, "[data-test-form-element]"))
+                nh = len(self.driver.find_elements(By.CSS_SELECTOR, "#jobs-apply-header"))
+                nn = len(self.driver.find_elements(By.CSS_SELECTOR, "button[data-easy-apply-next-button]"))
+            except Exception:
+                cur = "?"
+                nd = nm = nf = nfe = nh = nn = -1
+            log.error(
+                "Easy Apply 向导检测超时: job_id=%s current_url=%s "
+                "role=dialog=%s artdeco-modal=%s file_input=%s "
+                "data-test-form-element=%s jobs-apply-header=%s easy-apply-next=%s",
+                job_id,
+                cur,
+                nd,
+                nm,
+                nf,
+                nfe,
+                nh,
+                nn,
+            )
             return False
 
         for step in range(22):
-            root = _modal_root(self.driver)
+            root = _apply_wizard_root(self.driver)
             if root is None:
+                if self._handle_closed_job_if_any(job_id, open_in_new_tab, "填表步骤中"):
+                    return False
                 if self._looks_submitted():
                     log.info("弹窗已关闭且页面显示已投递迹象: job_id=%s", job_id)
                     return True
@@ -129,48 +373,284 @@ class EasyApplyAutomation:
             try:
                 self._upload_resume_if_present(root, str(resume_path))
                 self._fill_text_fields(root, answers, job_row)
-                self._fill_selects(root, answers)
+                self._fill_selects(root, answers, job_row)
                 self._answer_yes_no_radios(root)
             except StaleElementReferenceException:
                 time.sleep(0.5)
                 continue
 
             if self._submit_button_visible():
-                time.sleep(2.0)
-            if self._click_submit():
-                if self._wait_post_submit():
-                    log.info("已提交申请: job_id=%s", job_id)
+                time.sleep(1.0)
+                if not submit_application:
+                    log.info("已填至提交页，未点击提交（保留本页待手动提交）: job_id=%s", job_id)
                     return True
-                log.warning("点击提交后未确认成功，可能需人工检查: job_id=%s", job_id)
-                return False
+                if self._click_submit():
+                    if self._wait_post_submit():
+                        log.info("已提交申请: job_id=%s", job_id)
+                        return True
+                    log.warning("点击提交后未确认成功，可能需人工检查: job_id=%s", job_id)
+                    return False
 
             if not self._click_next():
+                if self._submit_button_visible() and not submit_application:
+                    log.info("已填至提交页，未点击提交: job_id=%s", job_id)
+                    return True
                 log.warning("未找到下一步/提交按钮，可能卡在某步: job_id=%s step=%s", job_id, step)
                 return False
-            time.sleep(1.2)
+            time.sleep(0.85)
 
         log.error("超过最大步数仍未完成: job_id=%s", job_id)
         return False
 
-    def _click_easy_apply_button(self) -> bool:
-        xpaths = [
-            "//button[contains(@class,'jobs-apply-button') and contains(.,'Easy')]",
-            "//button[contains(@class,'jobs-apply-button') and contains(@aria-label,'Easy Apply')]",
-            "//button[contains(@class,'jobs-apply-button')]",
+    _EASY_APPLY_LABEL = re.compile(r"easy\s*apply", re.IGNORECASE)
+
+    def _label_says_easy_apply(self, el) -> bool:
+        """用可见文案 + aria-label 等判断是否为 Easy Apply（排除仅「Apply」外链）。"""
+        parts = [
+            el.text or "",
+            el.get_attribute("aria-label") or "",
+            el.get_attribute("title") or "",
+            el.get_attribute("data-control-name") or "",
         ]
+        blob = " ".join(p for p in parts if p)
+        return bool(blob and self._EASY_APPLY_LABEL.search(blob))
+
+    def _wait_for_job_apply_area(self) -> None:
+        """等职位详情区出现；每个选择器单独短等，避免旧逻辑「多个 18s 串行」拖到一分钟以上。"""
+        hints = [
+            (By.CSS_SELECTOR, ".jobs-details-top-card"),
+            (By.CSS_SELECTOR, ".jobs-search-job-details__body"),
+            (By.CSS_SELECTOR, ".jobs-unified-top-card"),
+            (By.CSS_SELECTOR, "[class*='jobs-apply']"),
+            (By.CSS_SELECTOR, "main"),
+        ]
+        per_hint_s = 4
+        for by, sel in hints:
+            try:
+                self._wait(per_hint_s).until(EC.presence_of_element_located((by, sel)))
+                return
+            except TimeoutException:
+                continue
+
+    def _job_closed_banner_visible(self) -> bool:
+        """优先：LinkedIn 行内/Toast 提示（含 aria-live、Error 图标），不必等整页 HTML 稳定。"""
+        xps = (
+            "//p[contains(.,'No longer accepting applications')]",
+            "//*[contains(.,'No longer accepting applications')][@aria-live='assertive' or @aria-live='polite']",
+            "//*[@aria-live='assertive' or @aria-live='polite'][.//*[contains(.,'No longer accepting applications')]]",
+        )
+        for xp in xps:
+            try:
+                for el in self.driver.find_elements(By.XPATH, xp):
+                    try:
+                        if el.is_displayed() and "accepting" in (el.text or "").lower():
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+        try:
+            for el in self.driver.find_elements(By.CSS_SELECTOR, "[aria-live='assertive'], [aria-live='polite']"):
+                try:
+                    if not el.is_displayed():
+                        continue
+                    t = (el.text or "").lower()
+                    if "no longer accepting applications" in t or (
+                        "no longer accepting" in t and "application" in t
+                    ):
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
+
+    def _job_no_longer_accepting_applications(self) -> bool:
+        if self._job_closed_banner_visible():
+            return True
+        low = (self.driver.page_source or "").lower()
+        return any(m in low for m in self._CLOSED_JOB_MARKERS)
+
+    def _handle_closed_job_if_any(self, job_id: str, open_in_new_tab: bool, phase: str) -> bool:
+        """若岗位已关闭：打日志、关标签（若适用）、返回 True 表示应结束本岗位。"""
+        if not self._job_no_longer_accepting_applications():
+            return False
+        log.warning(
+            "职位已不再接受申请（%s），跳过 Easy Apply: job_id=%s",
+            phase,
+            job_id,
+        )
+        self._close_tab_if_opened_for_this_job(open_in_new_tab)
+        return True
+
+    def _close_tab_if_opened_for_this_job(self, open_in_new_tab: bool) -> None:
+        """本岗位若是新标签打开的，则关掉当前标签并切回剩余窗口，避免堆积无效页。"""
+        if not open_in_new_tab:
+            return
+        try:
+            if len(self.driver.window_handles) > 1:
+                self.driver.close()
+                if self.driver.window_handles:
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
+        except Exception:
+            try:
+                if self.driver.window_handles:
+                    self.driver.switch_to.window(self.driver.window_handles[0])
+            except Exception:
+                pass
+
+    def _find_easy_apply_apply_href(self) -> Optional[str]:
+        """站内 Easy Apply 的 <a href>（含 openSDUIApplyFlow 或 /jobs/view/.../apply/）。"""
+        for xp in (
+            "//a[contains(@href,'openSDUIApplyFlow')]",
+            "//a[contains(@href,'/apply/') and contains(@href,'/jobs/view/')]",
+        ):
+            try:
+                for a in self.driver.find_elements(By.XPATH, xp):
+                    try:
+                        if not a.is_displayed():
+                            continue
+                    except Exception:
+                        continue
+                    raw = (a.get_attribute("href") or "").strip()
+                    if not raw:
+                        continue
+                    if raw.lower().startswith("http"):
+                        return raw
+                    return urljoin(self.driver.current_url, raw)
+            except Exception:
+                continue
+        return None
+
+    def _wait_for_apply_wizard_ready(
+        self, job_id: str, open_in_new_tab: bool
+    ) -> tuple[bool, bool]:
+        """
+        先短等弹层/内联向导；若仍只有 /jobs/view/ 且 DOM 无表单，则对 apply 链接 driver.get（绕过 SPA 点击不生效）。
+
+        返回 (向导已出现, 是否已按关岗处理)。第二项为 True 时调用方应直接结束本岗位，勿记为「向导超时」。
+        轮询中优先检测「No longer accepting applications」等关岗提示并走关标签流程。
+        """
+        if self._handle_closed_job_if_any(job_id, open_in_new_tab, "等待向导出现时"):
+            return False, True
+
+        t_click = time.time()
+        while time.time() - t_click < 10.0:
+            if self._handle_closed_job_if_any(job_id, open_in_new_tab, "等待向导(点击后)"):
+                return False, True
+            if _apply_wizard_root(self.driver) is not None:
+                return True, False
+            time.sleep(0.28)
+
+        href = self._find_easy_apply_apply_href()
+        if href:
+            log.info(
+                "Easy Apply 点击后 10s 内未检测到向导，改为直接打开 apply 链接: job_id=%s",
+                job_id,
+            )
+            self.driver.get(href)
+            time.sleep(0.8)
+            if self._handle_closed_job_if_any(job_id, open_in_new_tab, "打开 apply 链接后"):
+                return False, True
+
+        t_nav = time.time()
+        while time.time() - t_nav < 26.0:
+            if self._handle_closed_job_if_any(job_id, open_in_new_tab, "打开 apply 页后等待向导"):
+                return False, True
+            if _apply_wizard_root(self.driver) is not None:
+                return True, False
+            time.sleep(0.35)
+        ok = _apply_wizard_root(self.driver) is not None
+        return ok, False
+
+    def _click_easy_apply_button(self) -> bool:
+        """LinkedIn 常把 Easy Apply 做成 <a href=.../apply/?openSDUIApplyFlow=...>，无 jobs-apply-button 类名。"""
+        xpaths = [
+            # 新版：链接式 Easy Apply（你提供的 DOM）
+            "//a[contains(@href,'openSDUIApplyFlow')]",
+            "//a[contains(@href,'/apply/') and contains(@href,'/jobs/view/')]",
+            "//a[contains(@aria-label,'Easy Apply') or contains(@aria-label,'easy apply')]",
+            "//button[contains(@class,'jobs-apply-button') and contains(.,'Easy')]",
+            "//button[contains(@class,'jobs-apply-button') and contains(@aria-label,'Easy')]",
+            "//button[contains(@class,'jobs-apply-button')]",
+            "//button[contains(@aria-label,'Easy Apply') or contains(@aria-label,'easy apply')]",
+            "//a[contains(@class,'jobs-apply-button')]",
+            "//span[contains(normalize-space(.),'Easy Apply')]/ancestor::button[1]",
+            "//span[contains(normalize-space(.),'Easy Apply')]/ancestor::*[self::a or self::button][1]",
+            "//*[contains(@class,'jobs-apply-button--top-card')]//button",
+            "//*[contains(@class,'jobs-apply-button--top-card')]//a[contains(@href,'/apply/')]",
+        ]
+
+        seen = set()
+
+        def try_click(el) -> bool:
+            try:
+                eid = id(el)
+                if eid in seen:
+                    return False
+                seen.add(eid)
+                if not el.is_displayed():
+                    return False
+                tag = (el.tag_name or "").lower()
+                # 带 href 的 <a> 在部分 WebDriver 上 is_enabled() 不可靠，不以它为准
+                if tag != "a":
+                    try:
+                        if not el.is_enabled():
+                            return False
+                    except Exception:
+                        pass
+            except Exception:
+                return False
+            href = (el.get_attribute("href") or "").lower()
+            # 站内 Easy Apply 入口（你提供的链接形态）
+            if "opensduiapplyflow" in href:
+                _safe_click(self.driver, el)
+                return True
+            if "linkedin.com" in href and "/jobs/view/" in href and "/apply/" in href:
+                if self._label_says_easy_apply(el):
+                    _safe_click(self.driver, el)
+                    return True
+            if not self._label_says_easy_apply(el):
+                return False
+            _safe_click(self.driver, el)
+            return True
+
         for xp in xpaths:
             try:
-                buttons = self.driver.find_elements(By.XPATH, xp)
-                for b in buttons:
-                    if not b.is_displayed():
-                        continue
-                    t = (b.text or "").lower()
-                    a = (b.get_attribute("aria-label") or "").lower()
-                    if "easy apply" in t or "easy apply" in a or "easy" in t:
-                        _safe_click(self.driver, b)
+                for b in self.driver.find_elements(By.XPATH, xp):
+                    if try_click(b):
                         return True
             except Exception:
                 continue
+
+        scope_sels = [
+            ".jobs-unified-top-card",
+            ".jobs-details-top-card",
+            ".jobs-details",
+            ".jobs-search-job-details__body",
+            "main",
+        ]
+        for sel in scope_sels:
+            try:
+                scopes = self.driver.find_elements(By.CSS_SELECTOR, sel)
+            except Exception:
+                continue
+            for scope in scopes:
+                try:
+                    if not scope.is_displayed():
+                        continue
+                except Exception:
+                    continue
+                try:
+                    for b in scope.find_elements(
+                        By.CSS_SELECTOR,
+                        "button, a[href*='/apply/'], a[href*='openSDUIApplyFlow'], a.artdeco-button",
+                    ):
+                        if try_click(b):
+                            return True
+                except Exception:
+                    continue
+
         return False
 
     def _upload_resume_if_present(self, root, resume_abs: str) -> None:
@@ -236,17 +716,25 @@ class EasyApplyAutomation:
                 for x in extras
                 if isinstance(x, dict)
             )
+        bc_row = str(job_row.get("base_country") or "").strip().lower()
+        phone_val = str(answers.get("phone") or job_row.get("contact_phone") or "")
+        addr_val = str(answers.get("full_address_line") or job_row.get("contact_address") or "")
+        country_val = (str(answers.get("country") or "").strip() or str(job_row.get("base_country") or "").strip())
+        if bc_row == "switzerland":
+            phone_val = str(job_row.get("contact_phone") or "").strip() or _SWISS_DEFAULT_PHONE
+            addr_val = str(job_row.get("contact_address") or "").strip() or _SWISS_DEFAULT_ADDRESS
+            country_val = "Switzerland"
         return {
             "email": str(answers.get("email") or ""),
-            "phone": str(answers.get("phone") or job_row.get("contact_phone") or ""),
-            "mobile": str(answers.get("phone") or ""),
+            "phone": phone_val,
+            "mobile": phone_val,
             "first": first,
             "last": last,
             "name": full,
             "city": str(answers.get("city") or ""),
-            "country": str(answers.get("country") or ""),
+            "country": country_val,
             "postal": str(answers.get("postal_code") or ""),
-            "address": str(answers.get("full_address_line") or job_row.get("contact_address") or ""),
+            "address": addr_val,
             "linkedin": str(answers.get("linkedin_url") or ""),
             "notice": str(answers.get("notice_period") or ""),
             "authorization": str(answers.get("work_authorization") or ""),
@@ -257,7 +745,10 @@ class EasyApplyAutomation:
     def _match_answer(self, label: str, m: dict[str, str]) -> str:
         if not label:
             return ""
+        # 须先于泛泛的 "phone"，避免「Phone country code」误用手机号填区号下拉
         pairs = [
+            ("phone country", "country"),
+            ("country code", "country"),
             ("mail", "email"),
             ("email", "email"),
             ("phone", "phone"),
@@ -296,6 +787,28 @@ class EasyApplyAutomation:
             return m["extra"][:500]
         return ""
 
+    def _select_option_contains_fragment(self, sel: Select, fragment: str) -> bool:
+        """按可见文案子串选 option（如 Germany (+49) 匹配 answers.country=Germany）。"""
+        frag = (fragment or "").strip()
+        if not frag:
+            return False
+        low = frag.lower()
+        try:
+            for opt in sel.options:
+                txt = (opt.text or "").strip()
+                if not txt or "select an option" in txt.lower():
+                    continue
+                tl = txt.lower()
+                if low in tl or tl in low or low.split()[0] in tl:
+                    sel.select_by_visible_text(txt)
+                    return True
+            if len(frag) >= 3:
+                sel.select_by_partial_text(frag[: min(24, len(frag))])
+                return True
+        except Exception:
+            return False
+        return False
+
     def _field_label(self, el) -> str:
         eid = el.get_attribute("id") or ""
         if eid:
@@ -316,23 +829,42 @@ class EasyApplyAutomation:
             pass
         return ""
 
-    def _fill_selects(self, root, answers: dict[str, Any]) -> None:
-        country = (answers.get("country") or "").strip()
-        if not country:
-            return
+    def _fill_selects(self, root, answers: dict[str, Any], job_row: dict) -> None:
+        """Contact info 步：Email 下拉、Phone country code（+49 格式）、其它国家类 select。"""
+        mapping = self._answer_mapping(answers, job_row)
+        email = (mapping.get("email") or "").strip()
+        country = (mapping.get("country") or "").strip()
         for sel_el in root.find_elements(By.TAG_NAME, "select"):
             try:
                 if not sel_el.is_displayed():
                     continue
                 lab = self._field_label(sel_el).lower()
-                if "country" not in lab and "land" not in lab:
-                    continue
-                Select(sel_el).select_by_visible_text(country)
             except Exception:
+                continue
+            try:
+                s = Select(sel_el)
                 try:
-                    Select(sel_el).select_by_partial_text(country[:6])
+                    cur = (s.first_selected_option.text or "").strip().lower()
+                    if cur and "select an option" not in cur:
+                        continue
                 except Exception:
                     pass
+
+                is_phone_cc = (
+                    "phone country" in lab
+                    or "country code" in lab
+                    or ("phone" in lab and "country" in lab)
+                )
+                if "email" in lab and email:
+                    self._select_option_contains_fragment(s, email)
+                    continue
+                if is_phone_cc and country:
+                    self._select_option_contains_fragment(s, country)
+                    continue
+                if ("country" in lab or "land" in lab) and country and not is_phone_cc and "email" not in lab:
+                    self._select_option_contains_fragment(s, country)
+            except Exception:
+                continue
 
     def _answer_yes_no_radios(self, root) -> None:
         """对「是否授权工作」类单选，优先选 Yes / Ja。"""
@@ -351,25 +883,71 @@ class EasyApplyAutomation:
                 continue
 
     def _click_next(self) -> bool:
-        xps = [
-            "//button[contains(@class,'artdeco-button--primary') and .//span[text()='Next']]",
-            "//button[contains(@class,'artdeco-button--primary') and .//span[text()='Weiter']]",
-            "//button[@aria-label='Continue to next step']",
-            "//button[contains(@aria-label,'Continue to next')]",
-            "//button[contains(@aria-label,'Weiter')]",
-        ]
-        for xp in xps:
-            try:
-                for b in self.driver.find_elements(By.XPATH, xp):
-                    if b.is_displayed() and b.is_enabled():
+        """Next / Review 等主按钮；Additional Questions 步为 Review 而非 Next。"""
+        root = _apply_wizard_root(self.driver)
+
+        def try_ctx(finder, rel: bool) -> bool:
+            prefix = ".//" if rel else "//"
+            xps = [
+                prefix + "button[@data-easy-apply-next-button]",
+                prefix + "button[@data-live-test-easy-apply-next-button]",
+                prefix + "button[@data-live-test-easy-apply-review-button]",
+                prefix + "button[contains(@aria-label,'Review your application')]",
+                prefix + "button[contains(@aria-label,'Review')]",
+                prefix + "button[@aria-label='Continue to next step']",
+                prefix + "button[contains(@aria-label,'Continue to next')]",
+                prefix + "button[contains(@aria-label,'Weiter')]",
+                prefix
+                + "button[contains(@class,'artdeco-button--primary')]"
+                + "[.//span[normalize-space(.)='Next']]",
+                prefix
+                + "button[contains(@class,'artdeco-button--primary')]"
+                + "[.//span[normalize-space(.)='Weiter']]",
+                prefix
+                + "button[contains(@class,'artdeco-button--primary')]"
+                + "[.//span[normalize-space(.)='Review']]",
+            ]
+            for xp in xps:
+                try:
+                    for b in finder.find_elements(By.XPATH, xp):
+                        try:
+                            if not b.is_displayed():
+                                continue
+                            try:
+                                if not b.is_enabled():
+                                    continue
+                            except Exception:
+                                pass
+                        except Exception:
+                            continue
                         t = (b.text or "").lower()
                         if "submit" in t or "einreichen" in t or "bewerben" in t:
                             continue
                         _safe_click(self.driver, b)
                         return True
-            except Exception:
-                continue
-        return False
+                except Exception:
+                    continue
+            for sel in (
+                "button[data-easy-apply-next-button]",
+                "button[data-live-test-easy-apply-next-button]",
+                "button[data-live-test-easy-apply-review-button]",
+            ):
+                try:
+                    for b in finder.find_elements(By.CSS_SELECTOR, sel):
+                        try:
+                            if not b.is_displayed():
+                                continue
+                        except Exception:
+                            continue
+                        _safe_click(self.driver, b)
+                        return True
+                except Exception:
+                    continue
+            return False
+
+        if root is not None and try_ctx(root, rel=True):
+            return True
+        return try_ctx(self.driver, rel=False)
 
     def _submit_xpaths(self) -> list[str]:
         return [
@@ -404,7 +982,7 @@ class EasyApplyAutomation:
         while time.time() < deadline:
             if self._looks_submitted():
                 return True
-            if _modal_root(self.driver) is None:
+            if _apply_wizard_root(self.driver) is None:
                 time.sleep(0.6)
                 return self._looks_submitted()
             time.sleep(0.5)
@@ -431,21 +1009,36 @@ def run_prepared_jobs(
     prepared_rows: list[dict[str, Any]],
     artifacts_base: Path,
     pause_between_jobs_s: float = 4.0,
+    *,
+    submit_application: bool = True,
+    new_tab_per_job: bool = False,
 ) -> list[str]:
     """
     对 auto_applied 风格的记录依次执行 Easy Apply。
-    返回成功投递的 job_id 列表。
+
+    submit_application=False：填完向导至「提交申请」前即停，不点提交。
+    new_tab_per_job=True：除第一个岗位外，每个岗位在新浏览器标签打开，便于保留多页手动提交。
+
+    返回本流程成功完成的 job_id 列表（填表-only 成功也算成功，但不会代表已在 LinkedIn 提交）。
     """
     auto = EasyApplyAutomation(driver)
     ok: list[str] = []
-    for row in prepared_rows:
+    n = len(prepared_rows)
+    for i, row in enumerate(prepared_rows):
         jid = str(row.get("job_id") or "")
         if not jid:
             continue
+        open_in_new = bool(new_tab_per_job and i > 0)
         try:
-            if auto.apply_one(row, artifacts_base):
+            if auto.apply_one(
+                row,
+                artifacts_base,
+                submit_application=submit_application,
+                open_in_new_tab=open_in_new,
+            ):
                 ok.append(jid)
         except Exception as e:
             log.exception("Easy Apply 异常 job_id=%s: %s", jid, e)
-        time.sleep(pause_between_jobs_s)
+        if i < n - 1:
+            time.sleep(pause_between_jobs_s)
     return ok

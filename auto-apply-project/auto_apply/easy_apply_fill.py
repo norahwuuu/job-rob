@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .contact_scan import scan_resume_contacts
+from .linkedin_source import contact_by_country
 from .models import Job
 from .resume_text import read_resume_plaintext
 
@@ -75,17 +76,32 @@ def _merge_layer(
             out[key] = value
             sources[key] = source
 
-    set_field("email", scanned.get("email"), "resume")
-    set_field("phone", scanned.get("phone"), "resume")
+    def force_field(key: str, value: Any, source: str) -> None:
+        """Always set (used when job base country mandates a contact bundle)."""
+        if value is None or value == "":
+            return
+        out[key] = value
+        sources[key] = source
 
-    set_field("phone", (job.contact_phone or "").strip(), "todo")
-    addr = (job.contact_address or "").strip()
-    if addr:
-        set_field("full_address_line", addr, "todo")
-        if not out.get("country"):
-            bc = (job.base_country or "").strip()
-            if bc:
-                set_field("country", bc.title(), "todo")
+    set_field("email", scanned.get("email"), "resume")
+
+    bc_norm = (job.base_country or "").strip().lower()
+    # 公司 base 在瑞士时：电话/地址用瑞士（todo 或默认），不用简历里德国号码盖住 todo。
+    if bc_norm == "switzerland":
+        phone_sw, addr_sw = contact_by_country("switzerland")
+        force_field("phone", (job.contact_phone or phone_sw).strip(), "todo")
+        force_field("full_address_line", (job.contact_address or addr_sw).strip(), "todo")
+        force_field("country", "Switzerland", "todo")
+    else:
+        set_field("phone", scanned.get("phone"), "resume")
+        set_field("phone", (job.contact_phone or "").strip(), "todo")
+        addr = (job.contact_address or "").strip()
+        if addr:
+            set_field("full_address_line", addr, "todo")
+            if not out.get("country"):
+                bc = (job.base_country or "").strip()
+                if bc:
+                    set_field("country", bc.title(), "todo")
 
     set_field("email", envp.get("email"), "env")
     set_field("phone", envp.get("phone"), "env")

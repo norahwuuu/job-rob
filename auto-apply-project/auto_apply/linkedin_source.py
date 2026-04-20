@@ -49,7 +49,23 @@ def extract_easy_apply_candidates(items: list[dict]) -> list[Job]:
 
 def detect_base_country(text: str) -> str:
     lower = (text or "").lower()
-    if any(token in lower for token in ["switzerland", "schweiz", "zurich", "zuerich", "zürich", "geneva", "basel", "olten"]):
+    if any(
+        token in lower
+        for token in [
+            "switzerland",
+            "schweiz",
+            "zurich",
+            "zuerich",
+            "zürich",
+            "geneva",
+            "basel",
+            "olten",
+            "bern",
+            "lausanne",
+            "lugano",
+            "winterthur",
+        ]
+    ):
         return "switzerland"
     if any(token in lower for token in ["germany", "deutschland", "berlin", "munich", "muenchen", "hamburg", "frankfurt", "essen"]):
         return "germany"

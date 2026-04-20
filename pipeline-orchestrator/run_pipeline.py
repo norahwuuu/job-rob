@@ -1034,7 +1034,20 @@ AI 分析
                     str(job.get("company", "")),
                     str(job.get("job_description", ""))[:800],
                 ]).lower()
-                swiss_tokens = ["switzerland", "schweiz", "zurich", "zuerich", "zürich", "geneva", "basel", "olten"]
+                swiss_tokens = [
+                    "switzerland",
+                    "schweiz",
+                    "zurich",
+                    "zuerich",
+                    "zürich",
+                    "geneva",
+                    "basel",
+                    "olten",
+                    "bern",
+                    "lausanne",
+                    "lugano",
+                    "winterthur",
+                ]
                 if any(token in text for token in swiss_tokens):
                     return "switzerland"
                 return "germany"
@@ -2178,15 +2191,41 @@ AI Reason: {job.get('ai_reason', '')}
             return True
         return bool((self.config.get("advanced") or {}).get("easy_apply_browser", True))
 
-    def _run_easy_apply_browser_session(self, prepared_rows: List[dict]) -> List[str]:
-        """对已生成 easy_apply_answers 的岗位依次打开页面并投递。返回成功的 job_id。"""
+    def _run_easy_apply_browser_session(self, prepared_rows: List[dict]) -> tuple[List[str], bool]:
+        """对已生成 easy_apply_answers 的岗位依次打开页面并填表 / 投递。
+
+        返回 (成功的 job_id 列表, 是否应把成功项同步为 jobs_progress 的 applied)。
+        仅填表模式（未在 LinkedIn 点提交）第二项为 False，避免误标为已投递。
+        """
         if not prepared_rows:
-            return []
+            return [], False
         import linkedin_scraper
         from easy_apply_browser import run_prepared_jobs
 
+        adv = self.config.get("advanced") or {}
+        env_fill = os.environ.get("EASY_APPLY_FILL_ONLY", "").strip().lower()
+        if env_fill in ("1", "true", "yes", "on"):
+            fill_only = True
+        elif env_fill in ("0", "false", "no", "off"):
+            fill_only = False
+        else:
+            fill_only = bool(adv.get("easy_apply_fill_only", False))
+
+        default_pause = 60.0 if fill_only else 4.0
+        pause_cfg = adv.get("easy_apply_job_pause_s", default_pause)
+        try:
+            pause_between = float(os.environ.get("EASY_APPLY_JOB_PAUSE", pause_cfg) or pause_cfg)
+        except (TypeError, ValueError):
+            pause_between = default_pause
+
+        new_tabs = bool(adv.get("easy_apply_new_tab_per_job", True)) if fill_only else bool(
+            adv.get("easy_apply_new_tab_per_job", False)
+        )
+
+        keep_open = bool(adv.get("easy_apply_keep_browser_open", fill_only))
+
         linkedin_cfg = self.config.get("linkedin") or {}
-        headless = (self.config.get("advanced") or {}).get("headless", False)
+        headless = adv.get("headless", False)
         scraper = linkedin_scraper.LinkedInScraper(
             username=linkedin_cfg.get("username", ""),
             password=linkedin_cfg.get("password", ""),
@@ -2199,19 +2238,35 @@ AI Reason: {job.get('ai_reason', '')}
                 scraper.close()
             except Exception:
                 pass
-            return []
+            return [], False
         try:
-            return run_prepared_jobs(
+            ok_ids = run_prepared_jobs(
                 scraper.browser,
                 prepared_rows,
                 self.base_dir,
-                pause_between_jobs_s=float(os.environ.get("EASY_APPLY_JOB_PAUSE", "4") or 4),
+                pause_between_jobs_s=pause_between,
+                submit_application=not fill_only,
+                new_tab_per_job=new_tabs,
             )
+            sync_applied = bool(ok_ids) and not fill_only
+            if fill_only and ok_ids:
+                log.info(
+                    "Easy Apply 填表-only：%s 个岗位已停在提交前（未写入 jobs_progress 为 applied）；"
+                    "请在各标签页手动提交后自行更新状态。",
+                    len(ok_ids),
+                )
+            return ok_ids, sync_applied
         finally:
-            try:
-                scraper.close()
-            except Exception:
-                pass
+            if not keep_open:
+                try:
+                    scraper.close()
+                except Exception:
+                    pass
+            else:
+                log.info(
+                    "已按配置保留浏览器窗口（easy_apply_keep_browser_open）；"
+                    "请手动提交各标签申请后自行关闭浏览器。"
+                )
 
     def run_apply(
         self,
@@ -2224,7 +2279,8 @@ AI Reason: {job.get('ai_reason', '')}
         """阶段3: 自动申请 Easy Apply
         
         先调用 auto-apply-project 生成填表 JSON；若开启 easy_apply_browser，
-        再用 Selenium 遍历当日 easy_todo 对应岗位，打开页面并完成 Easy Apply。
+        再用 Selenium 遍历 easy_todo 对应岗位。advanced.easy_apply_fill_only 为 true 时
+        只填表至提交前并保留标签页，不把 jobs_progress 标为 applied。
         """
         log.info("=" * 60)
         log.info("阶段 3: 自动申请 Easy Apply")
@@ -2323,9 +2379,9 @@ AI Reason: {job.get('ai_reason', '')}
                 str(easy_todo_file),
                 "--jobs-progress",
                 str(jobs_progress_file),
-                "--max",
-                str(max_jobs),
             ]
+            if max_jobs is not None:
+                cmd.extend(["--max", str(max_jobs)])
             if target_job_id:
                 cmd.extend(["--job-id", str(target_job_id)])
             
@@ -2359,10 +2415,13 @@ AI Reason: {job.get('ai_reason', '')}
 
             want_browser = self._want_easy_apply_browser(no_browser)
             applied_job_ids: List[str] = []
+            browser_sync_applied = True
 
             if want_browser and auto_applied:
-                log.info(f"浏览器 Easy Apply 已启用，准备投递 {len(auto_applied)} 个岗位")
-                applied_job_ids = self._run_easy_apply_browser_session(auto_applied)
+                log.info(f"浏览器 Easy Apply 已启用，准备处理 {len(auto_applied)} 个岗位")
+                applied_job_ids, browser_sync_applied = self._run_easy_apply_browser_session(
+                    auto_applied
+                )
             elif auto_applied:
                 applied_job_ids = [
                     str(row.get("job_id"))
@@ -2370,7 +2429,7 @@ AI Reason: {job.get('ai_reason', '')}
                     if row.get("job_id")
                 ]
 
-            if applied_job_ids:
+            if applied_job_ids and browser_sync_applied:
                 self._sync_apply_results(
                     [{"job_id": jid, "success": True} for jid in applied_job_ids]
                 )
@@ -2378,6 +2437,11 @@ AI Reason: {job.get('ai_reason', '')}
                 log.info(
                     f"\n申请完成：已标记为已投递 {len(applied_job_ids)} 个"
                     f"（本轮准备 {len(auto_applied)} 个）"
+                )
+                self.generate_daily_summary()
+            elif applied_job_ids and not browser_sync_applied:
+                log.info(
+                    f"\n浏览器填表完成 {len(applied_job_ids)} 个（未自动标为已投递，等待你在各页手动提交）"
                 )
                 self.generate_daily_summary()
             elif auto_applied and want_browser:
@@ -2591,7 +2655,7 @@ def main():
   python run_pipeline.py rescore-llm              # 重新评分：ai_reason 为 LLM评分失败 / 未获取到评分
   python run_pipeline.py rescore-llm --limit 30    # 只重评前 30 条失败记录（防 429）
   python run_pipeline.py rescore-llm --quota-skipped # 只重评 quota_skipped_jobs.json 里的失败岗位（更快）
-  python run_pipeline.py apply        # 只自动申请 Easy Apply（默认含浏览器投递，见 advanced.easy_apply_browser）
+  python run_pipeline.py apply        # Easy Apply：见 advanced（easy_apply_fill_only 等；可只填表、多标签、手动提交）
   python run_pipeline.py apply --max 10  # 最多申请10个岗位
   python run_pipeline.py apply --no-browser  # 仅生成填表 JSON，不打开浏览器
   python run_pipeline.py apply --date 2026-04-16 --max 5  # 指定日期 easy_todo
